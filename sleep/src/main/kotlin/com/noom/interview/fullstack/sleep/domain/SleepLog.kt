@@ -26,6 +26,19 @@ data class SleepLog(
         GOOD,
     }
 
+    companion object {
+        fun create(
+            bedTime: LocalTime,
+            wakeTime: LocalTime,
+            mood: WakeUpMood,
+        ): SleepLog = SleepLog(
+            id = UUID.randomUUID(),
+            bedTime = bedTime,
+            wakeTime = wakeTime,
+            mood = mood
+        )
+    }
+
     private fun calculateTimeInBed(
         bedTime: LocalTime,
         wakeTime: LocalTime,

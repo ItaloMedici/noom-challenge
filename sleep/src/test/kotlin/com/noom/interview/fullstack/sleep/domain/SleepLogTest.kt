@@ -65,6 +65,25 @@ class SleepLogTest {
     }
 
     @Test
+    fun `create should set defaults and generate unique ids`() {
+        val s1 = SleepLog.create(bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), mood = SleepLog.WakeUpMood.GOOD)
+        val s2 = SleepLog.create(bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), mood = SleepLog.WakeUpMood.GOOD)
+
+        assertEquals(LocalDate.now(), s1.sleepDate)
+        assertEquals(LocalTime.of(22, 0), s1.bedTime)
+        assertEquals(LocalTime.of(6, 0), s1.wakeTime)
+        assertEquals(SleepLog.WakeUpMood.GOOD, s1.mood)
+        assertTrue(s1.id != s2.id)
+    }
+
+    @Test
+    fun `create should calculate time in bed for overnight sleeps`() {
+        val sleepLog = SleepLog.create(bedTime = LocalTime.of(23, 0), wakeTime = LocalTime.of(7, 0), mood = SleepLog.WakeUpMood.OK)
+
+        assertEquals(Duration.ofHours(8), sleepLog.timeInBed)
+    }
+
+    @Test
     fun `should not allow identical bed and wake times`() {
         val bedTime = LocalTime.of(6, 0)
         val wakeTime = LocalTime.of(6, 0)
@@ -95,7 +114,7 @@ class SleepLogTest {
                 mood = SleepLog.WakeUpMood.GOOD,
             )
 
-        assertEquals(java.time.Duration.ofHours(8), sleepLog.timeInBed)
+        assertEquals(Duration.ofHours(8), sleepLog.timeInBed)
     }
 
     @Test
@@ -111,7 +130,7 @@ class SleepLogTest {
                 mood = SleepLog.WakeUpMood.GOOD,
             )
 
-        assertEquals(java.time.Duration.ofHours(8), sleepLog.timeInBed)
+        assertEquals(Duration.ofHours(8), sleepLog.timeInBed)
     }
 
     @Test
@@ -128,7 +147,7 @@ class SleepLogTest {
             )
 
         assertEquals(
-            java.time.Duration
+            Duration
                 .ofHours(7)
                 .plusMinutes(45),
             sleepLog.timeInBed,
