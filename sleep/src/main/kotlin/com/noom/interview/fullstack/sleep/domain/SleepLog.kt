@@ -7,6 +7,7 @@ import java.util.UUID
 
 data class SleepLog(
     val id: UUID,
+    val userId: UUID,
     val sleepDate: LocalDate = LocalDate.now(),
     val bedTime: LocalTime,
     val wakeTime: LocalTime,
@@ -28,11 +29,13 @@ data class SleepLog(
 
     companion object {
         fun create(
+            userId: UUID,
             bedTime: LocalTime,
             wakeTime: LocalTime,
             mood: WakeUpMood,
         ): SleepLog = SleepLog(
             id = UUID.randomUUID(),
+            userId = userId,
             bedTime = bedTime,
             wakeTime = wakeTime,
             mood = mood
