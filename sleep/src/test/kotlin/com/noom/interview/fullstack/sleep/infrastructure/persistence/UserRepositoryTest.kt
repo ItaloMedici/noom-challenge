@@ -2,12 +2,14 @@ package com.noom.interview.fullstack.sleep.infrastructure.persistence
 
 import com.noom.interview.fullstack.sleep.domain.User
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
+@Tag("integration")
 @SpringBootTest
 @Transactional
 class UserRepositoryTest {
