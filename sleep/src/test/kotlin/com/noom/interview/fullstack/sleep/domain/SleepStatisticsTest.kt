@@ -1,9 +1,11 @@
 package com.noom.interview.fullstack.sleep.domain
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.UUID
 
 class SleepStatisticsTest {
     @Test
@@ -23,6 +25,7 @@ class SleepStatisticsTest {
         val range = LocalDate.now()..LocalDate.now().minusDays(1)
 
         val sleepLogs = SleepLog.create(
+            userId = UUID.randomUUID(),
             bedTime = LocalTime.of(22, 0),
             wakeTime = LocalTime.of(6, 0),
             mood = SleepLog.WakeUpMood.GOOD,
@@ -39,8 +42,18 @@ class SleepStatisticsTest {
     @Test
     fun `average bedtime for times crossing midnight`() {
         val logs = listOf(
-            SleepLog.create(bedTime = LocalTime.of(23, 30), wakeTime = LocalTime.of(7, 0), mood = SleepLog.WakeUpMood.OK),
-            SleepLog.create(bedTime = LocalTime.of(0, 30), wakeTime = LocalTime.of(8, 0), mood = SleepLog.WakeUpMood.GOOD)
+            SleepLog.create(
+                userId = UUID.randomUUID(),
+                bedTime = LocalTime.of(23, 30),
+                wakeTime = LocalTime.of(7, 0),
+                mood = SleepLog.WakeUpMood.OK,
+            ),
+            SleepLog.create(
+                userId = UUID.randomUUID(),
+                bedTime = LocalTime.of(0, 30),
+                wakeTime = LocalTime.of(8, 0),
+                mood = SleepLog.WakeUpMood.GOOD,
+            ),
         )
         val range = LocalDate.now().minusDays(1)..LocalDate.now()
 
@@ -53,8 +66,18 @@ class SleepStatisticsTest {
     @Test
     fun `should calculate statistics happy path`() {
         val logs = listOf(
-            SleepLog.create(bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), mood = SleepLog.WakeUpMood.GOOD),
-            SleepLog.create(bedTime = LocalTime.of(23, 0), wakeTime = LocalTime.of(7, 0), mood = SleepLog.WakeUpMood.OK)
+            SleepLog.create(
+                userId = UUID.randomUUID(),
+                bedTime = LocalTime.of(22, 0),
+                wakeTime = LocalTime.of(6, 0),
+                mood = SleepLog.WakeUpMood.GOOD,
+            ),
+            SleepLog.create(
+                userId = UUID.randomUUID(),
+                bedTime = LocalTime.of(23, 0),
+                wakeTime = LocalTime.of(7, 0),
+                mood = SleepLog.WakeUpMood.OK,
+            ),
         )
         val range = LocalDate.now().minusDays(1)..LocalDate.now()
 
