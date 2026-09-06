@@ -13,5 +13,5 @@ interface SleepLogRepository {
         endDate: LocalDate,
     ): List<SleepLog>
 
-    fun findLastByUserId(userId: UUID): SleepLog?
+    fun findByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): SleepLog?
 }

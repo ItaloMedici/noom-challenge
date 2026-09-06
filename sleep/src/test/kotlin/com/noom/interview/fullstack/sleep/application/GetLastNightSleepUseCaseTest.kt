@@ -18,9 +18,9 @@ class GetLastNightSleepUseCaseTest {
     private val useCase = GetLastNightSleepUseCase(sleepLogRepository)
 
     @Test
-    fun `should return the latest sleep log for the user`() {
+    fun `should return the sleep log for yesterday`() {
         val user = User.create("italo")
-        val latestSleepLog =
+        val lastNightSleepLog =
             SleepLog.create(
                 userId = user.id,
                 sleepDate = LocalDate.now().minusDays(1),
@@ -29,23 +29,28 @@ class GetLastNightSleepUseCaseTest {
                 mood = SleepLog.WakeUpMood.GOOD,
             )
 
-        every { sleepLogRepository.findLastByUserId(user.id) } returns latestSleepLog
+        every {
+            sleepLogRepository.findByUserIdAndSleepDate(user.id, LocalDate.now().minusDays(1))
+        } returns lastNightSleepLog
 
         val result = useCase.execute(user.id)
 
-        assertThat(result).isSameAs(latestSleepLog)
-        verify(exactly = 1) { sleepLogRepository.findLastByUserId(user.id) }
+        assertThat(result).isSameAs(lastNightSleepLog)
+        verify(exactly = 1) {
+            sleepLogRepository.findByUserIdAndSleepDate(user.id, LocalDate.now().minusDays(1))
+        }
     }
 
     @Test
-    fun `should return null when the user has no sleep logs`() {
+    fun `should return null when the user has no sleep log for last night`() {
         val unknownUserId = UUID.randomUUID()
+        val lastNightDate = LocalDate.now().minusDays(1)
 
-        every { sleepLogRepository.findLastByUserId(unknownUserId) } returns null
+        every { sleepLogRepository.findByUserIdAndSleepDate(unknownUserId, lastNightDate) } returns null
 
         val result = useCase.execute(unknownUserId)
 
         assertThat(result).isNull()
-        verify(exactly = 1) { sleepLogRepository.findLastByUserId(unknownUserId) }
+        verify(exactly = 1) { sleepLogRepository.findByUserIdAndSleepDate(unknownUserId, lastNightDate) }
     }
 }

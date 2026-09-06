@@ -27,9 +27,9 @@ class JpaSleepLogRepository(
             .map(SleepLogJpaEntity::toDomain)
     }
 
-    override fun findLastByUserId(userId: UUID): SleepLog? {
+    override fun findByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): SleepLog? {
         return springDataSleepLogRepository
-            .findTopByUserIdOrderBySleepDateDesc(userId)
+            .findByUserIdAndSleepDate(userId, sleepDate)
             ?.let(SleepLogJpaEntity::toDomain)
     }
 }

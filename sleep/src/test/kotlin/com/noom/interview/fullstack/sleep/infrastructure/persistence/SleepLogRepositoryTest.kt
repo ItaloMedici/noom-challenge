@@ -121,9 +121,9 @@ class SleepLogRepositoryTest {
     }
 
     @Test
-    fun `findLastByUserId should return most recent log`() {
+    fun `findByUserIdAndSleepDate should return the log for that specific date`() {
         sleepLogRepository.save(sleepLog(userId, LocalDate.now().minusDays(3), LocalTime.of(22, 0), LocalTime.of(6, 0)))
-        val newer =
+        val lastNight =
             sleepLogRepository.save(
                 sleepLog(
                     userId,
@@ -133,17 +133,19 @@ class SleepLogRepositoryTest {
                 )
             )
 
-        val last = sleepLogRepository.findLastByUserId(userId)
+        val found = sleepLogRepository.findByUserIdAndSleepDate(userId, LocalDate.now().minusDays(1))
 
-        assertThat(last).isNotNull
-        assertThat(last!!.id).isEqualTo(newer.id)
+        assertThat(found).isNotNull
+        assertThat(found!!.id).isEqualTo(lastNight.id)
     }
 
     @Test
-    fun `findLastByUserId should return null when user has no logs`() {
-        val last = sleepLogRepository.findLastByUserId(userId)
+    fun `findByUserIdAndSleepDate should return null when there is no log for that date`() {
+        sleepLogRepository.save(sleepLog(userId, LocalDate.now().minusDays(3), LocalTime.of(22, 0), LocalTime.of(6, 0)))
 
-        assertThat(last).isNull()
+        val lastNight = sleepLogRepository.findByUserIdAndSleepDate(userId, LocalDate.now().minusDays(1))
+
+        assertThat(lastNight).isNull()
     }
 
     @Test
