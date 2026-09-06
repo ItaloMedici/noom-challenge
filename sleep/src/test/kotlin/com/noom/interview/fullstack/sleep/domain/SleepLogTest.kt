@@ -20,6 +20,7 @@ class SleepLogTest {
             assertThrows(IllegalArgumentException::class.java) {
                 SleepLog(
                     id = UUID.randomUUID(),
+                    userId = UUID.randomUUID(),
                     sleepDate = tomorrowDate,
                     bedTime = bedTime,
                     wakeTime = wakeTime,
@@ -39,6 +40,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 sleepDate = yesterdayDate,
                 bedTime = bedTime,
                 wakeTime = wakeTime,
@@ -56,6 +58,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 bedTime = bedTime,
                 wakeTime = wakeTime,
                 mood = SleepLog.WakeUpMood.GOOD,
@@ -66,8 +69,8 @@ class SleepLogTest {
 
     @Test
     fun `create should set defaults and generate unique ids`() {
-        val s1 = SleepLog.create(bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), mood = SleepLog.WakeUpMood.GOOD)
-        val s2 = SleepLog.create(bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), mood = SleepLog.WakeUpMood.GOOD)
+        val s1 = SleepLog.create(userId = UUID.randomUUID(), bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), mood = SleepLog.WakeUpMood.GOOD)
+        val s2 = SleepLog.create(userId = UUID.randomUUID(), bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), mood = SleepLog.WakeUpMood.GOOD)
 
         assertEquals(LocalDate.now(), s1.sleepDate)
         assertEquals(LocalTime.of(22, 0), s1.bedTime)
@@ -77,8 +80,24 @@ class SleepLogTest {
     }
 
     @Test
+    fun `create should allow past sleep dates`() {
+        val yesterday = LocalDate.now().minusDays(1)
+
+        val sleepLog =
+            SleepLog.create(
+                userId = UUID.randomUUID(),
+                sleepDate = yesterday,
+                bedTime = LocalTime.of(22, 0),
+                wakeTime = LocalTime.of(6, 0),
+                mood = SleepLog.WakeUpMood.GOOD,
+            )
+
+        assertEquals(yesterday, sleepLog.sleepDate)
+    }
+
+    @Test
     fun `create should calculate time in bed for overnight sleeps`() {
-        val sleepLog = SleepLog.create(bedTime = LocalTime.of(23, 0), wakeTime = LocalTime.of(7, 0), mood = SleepLog.WakeUpMood.OK)
+        val sleepLog = SleepLog.create(userId = UUID.randomUUID(), bedTime = LocalTime.of(23, 0), wakeTime = LocalTime.of(7, 0), mood = SleepLog.WakeUpMood.OK)
 
         assertEquals(Duration.ofHours(8), sleepLog.timeInBed)
     }
@@ -92,6 +111,7 @@ class SleepLogTest {
             assertThrows(IllegalArgumentException::class.java) {
                 SleepLog(
                     id = UUID.randomUUID(),
+                    userId = UUID.randomUUID(),
                     bedTime = bedTime,
                     wakeTime = wakeTime,
                     mood = SleepLog.WakeUpMood.GOOD,
@@ -109,6 +129,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 bedTime = bedTime,
                 wakeTime = wakeTime,
                 mood = SleepLog.WakeUpMood.GOOD,
@@ -125,6 +146,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 bedTime = bedTime,
                 wakeTime = wakeTime,
                 mood = SleepLog.WakeUpMood.GOOD,
@@ -141,6 +163,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 bedTime = bedTime,
                 wakeTime = wakeTime,
                 mood = SleepLog.WakeUpMood.GOOD,
@@ -163,6 +186,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 sleepDate = today,
                 bedTime = bedTime,
                 wakeTime = wakeTime,
@@ -180,6 +204,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 bedTime = bedTime,
                 wakeTime = wakeTime,
                 mood = SleepLog.WakeUpMood.GOOD,
@@ -196,6 +221,7 @@ class SleepLogTest {
         val sleepLog =
             SleepLog(
                 id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
                 bedTime = bedTime,
                 wakeTime = wakeTime,
                 mood = SleepLog.WakeUpMood.GOOD,
@@ -216,6 +242,7 @@ class SleepLogTest {
             val sleepLog =
                 SleepLog(
                     id = UUID.randomUUID(),
+                    userId = UUID.randomUUID(),
                     bedTime = bed,
                     wakeTime = wake,
                     mood = SleepLog.WakeUpMood.OK,

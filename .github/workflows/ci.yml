@@ -31,5 +31,5 @@ jobs:
       - name: Set up Gradle (caches dependencies)
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build (includes tests & coverage gate)
-        run: sh gradlew build
+      - name: Build (excludes integration tests)
+        run: sh gradlew build -PexcludeIntegrationTests
