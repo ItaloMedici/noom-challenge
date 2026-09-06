@@ -3,7 +3,7 @@ package com.noom.interview.fullstack.sleep.domain
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
-import java.util.UUID
+import java.util.*
 
 data class SleepLog(
     val id: UUID,
@@ -30,12 +30,14 @@ data class SleepLog(
     companion object {
         fun create(
             userId: UUID,
+            sleepDate: LocalDate = LocalDate.now(),
             bedTime: LocalTime,
             wakeTime: LocalTime,
             mood: WakeUpMood,
         ): SleepLog = SleepLog(
             id = UUID.randomUUID(),
             userId = userId,
+            sleepDate = sleepDate,
             bedTime = bedTime,
             wakeTime = wakeTime,
             mood = mood

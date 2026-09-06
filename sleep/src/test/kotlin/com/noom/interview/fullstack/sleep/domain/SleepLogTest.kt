@@ -80,6 +80,22 @@ class SleepLogTest {
     }
 
     @Test
+    fun `create should allow past sleep dates`() {
+        val yesterday = LocalDate.now().minusDays(1)
+
+        val sleepLog =
+            SleepLog.create(
+                userId = UUID.randomUUID(),
+                sleepDate = yesterday,
+                bedTime = LocalTime.of(22, 0),
+                wakeTime = LocalTime.of(6, 0),
+                mood = SleepLog.WakeUpMood.GOOD,
+            )
+
+        assertEquals(yesterday, sleepLog.sleepDate)
+    }
+
+    @Test
     fun `create should calculate time in bed for overnight sleeps`() {
         val sleepLog = SleepLog.create(userId = UUID.randomUUID(), bedTime = LocalTime.of(23, 0), wakeTime = LocalTime.of(7, 0), mood = SleepLog.WakeUpMood.OK)
 
