@@ -12,7 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.LocalTime
-import java.util.*
+import java.util.UUID
 
 @SpringBootTest
 @Transactional
@@ -23,6 +23,9 @@ class SleepLogRepositoryTest {
 
     @Autowired
     lateinit var userRepository: UserRepository
+
+    @Autowired
+    lateinit var springDataUserRepository: SpringDataUserRepository
 
     private lateinit var userId: UUID
 
@@ -139,6 +142,22 @@ class SleepLogRepositoryTest {
         val last = sleepLogRepository.findLastByUserId(userId)
 
         assertThat(last).isNull()
+    }
+
+    @Test
+    fun `deleting a user should cascade delete the sleep logs`() {
+        sleepLogRepository.save(sleepLog(userId, LocalDate.now().minusDays(1), LocalTime.of(22, 0), LocalTime.of(6, 0)))
+        sleepLogRepository.save(sleepLog(userId, LocalDate.now(), LocalTime.of(23, 0), LocalTime.of(7, 0)))
+
+        springDataUserRepository.deleteById(userId)
+
+        val remaining = sleepLogRepository.findByUserIdAndSleepDateBetween(
+            userId = userId,
+            startDate = LocalDate.now().minusDays(30),
+            endDate = LocalDate.now(),
+        )
+
+        assertThat(remaining).isEmpty()
     }
 
     private fun sleepLog(
