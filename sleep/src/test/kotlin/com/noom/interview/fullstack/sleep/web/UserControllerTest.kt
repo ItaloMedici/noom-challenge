@@ -8,12 +8,11 @@ import com.noom.interview.fullstack.sleep.domain.exception.DuplicateUsernameExce
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.hamcrest.Matchers.hasItem
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import java.util.*
+import java.util.UUID
 
 class UserControllerTest {
 
@@ -57,7 +56,8 @@ class UserControllerTest {
             status { isBadRequest() }
             jsonPath("$.status") { value(400) }
             jsonPath("$.message") { value("Validation failed") }
-            jsonPath("$.errors") { value(hasItem("Username is required")) }
+            jsonPath("$.errors[0].field") { value("username") }
+            jsonPath("$.errors[0].message") { value("Username is required") }
         }
 
         verify(exactly = 0) { createUserUseCase.execute(any()) }
@@ -74,7 +74,8 @@ class UserControllerTest {
             status { isBadRequest() }
             jsonPath("$.status") { value(400) }
             jsonPath("$.message") { value("Validation failed") }
-            jsonPath("$.errors") { value(hasItem("Username is required")) }
+            jsonPath("$.errors[0].field") { value("username") }
+            jsonPath("$.errors[0].message") { value("Username is required") }
         }
 
         verify(exactly = 0) { createUserUseCase.execute(any()) }
@@ -84,8 +85,8 @@ class UserControllerTest {
     fun `should return 400 for too short username`() {
         val body = """{"username": "I"}"""
 
-        every { createUserUseCase.execute(any()) } throws
-                IllegalArgumentException("Username must be at least 2 characters")
+        every { createUserUseCase.execute(any()) } throws 
+            IllegalArgumentException("Username must be at least 2 characters")
 
         mockMvc.post("/v1/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -104,8 +105,8 @@ class UserControllerTest {
         val longUsername = "a".repeat(101)
         val body = """{"username": "$longUsername"}"""
 
-        every { createUserUseCase.execute(any()) } throws
-                IllegalArgumentException("Username must be at most 100 characters")
+        every { createUserUseCase.execute(any()) } throws 
+            IllegalArgumentException("Username must be at most 100 characters")
 
         mockMvc.post("/v1/users") {
             contentType = MediaType.APPLICATION_JSON
