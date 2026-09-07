@@ -34,4 +34,33 @@ class UserRepositoryTest {
 
         assertThat(found).isNull()
     }
+
+    @Test
+    fun `existsByUsername should return true when user exists`() {
+        val user = User.create("Italo")
+        repository.save(user)
+
+        val exists = repository.existsByUsername("Italo")
+
+        assertThat(exists).isTrue()
+    }
+
+    @Test
+    fun `existsByUsername should return false when user does not exist`() {
+        val exists = repository.existsByUsername("NonExistentUser")
+
+        assertThat(exists).isFalse()
+    }
+
+    @Test
+    fun `existsByUsername should be case sensitive`() {
+        val user = User.create("Italo")
+        repository.save(user)
+
+        val existsLower = repository.existsByUsername("italo")
+        val existsUpper = repository.existsByUsername("ITALO")
+
+        assertThat(existsLower).isFalse()
+        assertThat(existsUpper).isFalse()
+    }
 }
