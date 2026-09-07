@@ -1,30 +1,32 @@
 package com.noom.interview.fullstack.sleep.application
 
+import com.noom.interview.fullstack.sleep.common.annotation.UseCase
 import com.noom.interview.fullstack.sleep.domain.SleepStatistics
-import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
+import com.noom.interview.fullstack.sleep.domain.model.DateRange
 import com.noom.interview.fullstack.sleep.domain.repository.SleepLogRepository
-import java.time.LocalDate
+import java.time.Clock
 import java.util.*
 
+@UseCase
 class GetSleepStatisticsUseCase(
     private val sleepLogRepository: SleepLogRepository,
+    private val clock: Clock,
 ) {
-    fun execute(command: GetStatsCommand): SleepStatistics.SleepStatisticsCalculation? {
-        if (command.rangeStart.isAfter(command.rangeEnd)) {
-            throw InvalidDateRangeException()
-        }
+    fun execute(command: GetStatsCommand): SleepStatistics.SleepStatisticsCalculation {
+        val dateRange = DateRange.lastNDays(command.days ?: SleepStatistics.DEFAULT_RANGE_DAYS, clock)
 
         val sleepLogs =
-            sleepLogRepository.findByUserIdAndSleepDateBetween(command.userId, command.rangeStart, command.rangeEnd)
+            sleepLogRepository.findByUserIdAndSleepDateBetween(command.userId, dateRange.start, dateRange.end)
 
-        if (sleepLogs.isEmpty()) return null
-
-        return SleepStatistics.calculate(sleepLogs, command.rangeStart..command.rangeEnd)
+        return if (sleepLogs.isEmpty()) {
+            SleepStatistics.empty(dateRange)
+        } else {
+            SleepStatistics.calculate(sleepLogs, dateRange)
+        }
     }
 }
 
 data class GetStatsCommand(
     val userId: UUID,
-    val rangeStart: LocalDate,
-    val rangeEnd: LocalDate,
+    val days: Long? = null,
 )

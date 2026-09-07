@@ -1,14 +1,15 @@
 package com.noom.interview.fullstack.sleep.domain
 
+import com.noom.interview.fullstack.sleep.domain.model.DateRange
 import java.time.Duration
-import java.time.LocalDate
 import java.time.LocalTime
 
 object SleepStatistics {
 
-    fun calculate(sleepLogs: List<SleepLog>, range: ClosedRange<LocalDate>): SleepStatisticsCalculation {
+    const val DEFAULT_RANGE_DAYS: Long = 30
+
+    fun calculate(sleepLogs: List<SleepLog>, range: DateRange): SleepStatisticsCalculation {
         require(sleepLogs.isNotEmpty()) { "Cannot calculate statistics from an empty log set" }
-        require(range.start <= range.endInclusive) { "Invalid date range" }
 
         val averageTimeInBed = sleepLogs
             .map { it.timeInBed }
@@ -36,11 +37,20 @@ object SleepStatistics {
         )
     }
 
+    fun empty(dateRange: DateRange): SleepStatisticsCalculation =
+        SleepStatisticsCalculation(
+            range = dateRange,
+            averageTimeInBed = null,
+            averageBedTime = null,
+            averageWakeTime = null,
+            moodFrequencies = emptyMap()
+        )
+
     data class SleepStatisticsCalculation(
-        val range: ClosedRange<LocalDate>,
-        val averageTimeInBed: Duration,
-        val averageBedTime: LocalTime,
-        val averageWakeTime: LocalTime,
+        val range: DateRange,
+        val averageTimeInBed: Duration?,
+        val averageBedTime: LocalTime?,
+        val averageWakeTime: LocalTime?,
         val moodFrequencies: Map<SleepLog.WakeUpMood, Int>
     )
 }
