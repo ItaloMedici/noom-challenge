@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/api/users/{userId}/sleep-logs")
+@RequestMapping("/v1/users/{userId}/sleep-logs")
 class SleepLogController(
     private val getSleepStatisticsUseCase: GetSleepStatisticsUseCase,
 ) {
