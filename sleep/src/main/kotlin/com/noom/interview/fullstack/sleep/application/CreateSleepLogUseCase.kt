@@ -1,5 +1,6 @@
 package com.noom.interview.fullstack.sleep.application
 
+import com.noom.interview.fullstack.sleep.common.annotation.UseCase
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.repository.SleepLogRepository
@@ -8,6 +9,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.util.*
 
+@UseCase
 class CreateSleepLogUseCase(
     private val sleepLogRepository: SleepLogRepository,
     private val userRepository: UserRepository,

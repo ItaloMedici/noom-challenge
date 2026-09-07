@@ -5,6 +5,8 @@ import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.web.dto.ErrorResponseDto
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
@@ -25,8 +27,22 @@ class ApiExceptionHandler {
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<ErrorResponseDto> =
         badRequest(ex.message ?: "Invalid request")
 
-    private fun badRequest(message: String): ResponseEntity<ErrorResponseDto> =
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleMethodArgumentNotValid(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponseDto> =
+        badRequest(
+            message = "Validation failed",
+            errors = ex.bindingResult.fieldErrors.mapNotNull { it.defaultMessage },
+        )
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableBody(@Suppress("UNUSED_PARAMETER") ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponseDto> =
+        badRequest("Malformed request body")
+
+    private fun badRequest(
+        message: String,
+        errors: List<String> = emptyList(),
+    ): ResponseEntity<ErrorResponseDto> =
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(ErrorResponseDto(HttpStatus.BAD_REQUEST.value(), message))
+            .body(ErrorResponseDto(HttpStatus.BAD_REQUEST.value(), message, errors))
 }

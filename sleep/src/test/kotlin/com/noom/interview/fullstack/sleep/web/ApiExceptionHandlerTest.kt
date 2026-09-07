@@ -4,8 +4,13 @@ import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeExcep
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.core.MethodParameter
 import org.springframework.http.HttpStatus
-import java.util.UUID
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.mock.http.MockHttpInputMessage
+import org.springframework.validation.MapBindingResult
+import org.springframework.web.bind.MethodArgumentNotValidException
+import java.util.*
 
 class ApiExceptionHandlerTest {
 
@@ -27,14 +32,49 @@ class ApiExceptionHandlerTest {
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
         assertThat(response.body!!.status).isEqualTo(404)
+        assertThat(response.body!!.errors).isEmpty()
     }
 
     @Test
     fun `should map IllegalArgumentException to 400`() {
-        val response = handler.handleIllegalArgument(IllegalArgumentException("Bed time and wake time cannot be identical"))
+        val response =
+            handler.handleIllegalArgument(IllegalArgumentException("Bed time and wake time cannot be identical"))
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
         assertThat(response.body!!.status).isEqualTo(400)
         assertThat(response.body!!.message).isEqualTo("Bed time and wake time cannot be identical")
+        assertThat(response.body!!.errors).isEmpty()
     }
+
+    @Test
+    fun `should map MethodArgumentNotValidException to 400 with the field error list`() {
+        val bindingResult = MapBindingResult(mapOf<String, Any>(), "createSleepLogRequest")
+        bindingResult.rejectValue("mood", "NotNull", "Mood is required")
+        bindingResult.rejectValue("sleepDate", "NotNull", "Sleep date is required")
+
+        val response = handler.handleMethodArgumentNotValid(
+            MethodArgumentNotValidException(methodParameter(), bindingResult)
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.status).isEqualTo(400)
+        assertThat(response.body!!.message).isEqualTo("Validation failed")
+        assertThat(response.body!!.errors)
+            .containsExactlyInAnyOrder("Mood is required", "Sleep date is required")
+    }
+
+    @Test
+    fun `should map HttpMessageNotReadableException to 400 without leaking internals`() {
+        val response = handler.handleUnreadableBody(
+            HttpMessageNotReadableException("internal jackson detail", MockHttpInputMessage(ByteArray(0)))
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.status).isEqualTo(400)
+        assertThat(response.body!!.message).isEqualTo("Malformed request body")
+        assertThat(response.body!!.message).doesNotContain("internal jackson detail")
+    }
+
+    private fun methodParameter(): MethodParameter =
+        MethodParameter(ApiExceptionHandlerTest::class.java.declaredMethods.first(), -1)
 }

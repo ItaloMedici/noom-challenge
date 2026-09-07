@@ -1,17 +1,26 @@
 package com.noom.interview.fullstack.sleep.web
 
+import com.noom.interview.fullstack.sleep.application.CreateSleepLogCommand
+import com.noom.interview.fullstack.sleep.application.CreateSleepLogUseCase
 import com.noom.interview.fullstack.sleep.application.GetSleepStatisticsUseCase
 import com.noom.interview.fullstack.sleep.application.GetStatsCommand
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.SleepStatistics
+import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.model.DateRange
+import com.noom.interview.fullstack.sleep.web.dto.CreateSleepLogRequestDto
+import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
+import org.hamcrest.Matchers.hasItem
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
@@ -20,7 +29,12 @@ import java.util.*
 class SleepLogControllerTest {
 
     private val getSleepStatisticsUseCase = mockk<GetSleepStatisticsUseCase>()
-    private val controller = SleepLogController(getSleepStatisticsUseCase)
+    private val createSleepLogUseCase = mockk<CreateSleepLogUseCase>()
+    private val controller = SleepLogController(getSleepStatisticsUseCase, createSleepLogUseCase)
+    private val mockMvc = MockMvcBuilders
+        .standaloneSetup(controller)
+        .setControllerAdvice(ApiExceptionHandler())
+        .build()
 
     @Test
     fun `should return 200 with mapped statistics from the use case`() {
@@ -98,5 +112,144 @@ class SleepLogControllerTest {
         assertThrows(IllegalArgumentException::class.java) {
             controller.getStatistics(userId, days = 0)
         }
+    }
+
+    @Test
+    fun `should return 201 with created sleep log`() {
+        val userId = UUID.randomUUID()
+        val requestDto = validCreateRequest()
+
+        val createdSleepLog = SleepLog(
+            id = UUID.randomUUID(),
+            userId = userId,
+            sleepDate = requestDto.sleepDate!!,
+            bedTime = requestDto.bedTime!!,
+            wakeTime = requestDto.wakeTime!!,
+            mood = requestDto.mood!!
+        )
+
+        every { createSleepLogUseCase.execute(any()) } returns createdSleepLog
+
+        val response = controller.createSleepLog(userId, requestDto)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.CREATED)
+        val body = response.body!!
+        assertThat(body.id).isEqualTo(createdSleepLog.id)
+        assertThat(body.userId).isEqualTo(userId)
+        assertThat(body.sleepDate).isEqualTo(requestDto.sleepDate)
+        assertThat(body.bedTime).isEqualTo(requestDto.bedTime)
+        assertThat(body.wakeTime).isEqualTo(requestDto.wakeTime)
+        assertThat(body.mood).isEqualTo(requestDto.mood)
+        assertThat(body.durationInSeconds).isEqualTo(28800)
+
+        verify(exactly = 1) {
+            createSleepLogUseCase.execute(
+                CreateSleepLogCommand(
+                    userId = userId,
+                    sleepDate = LocalDate.of(2026, 8, 8),
+                    bedTime = LocalTime.of(22, 0),
+                    wakeTime = LocalTime.of(6, 0),
+                    mood = SleepLog.WakeUpMood.GOOD,
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `should propagate user not found from the create use case`() {
+        val userId = UUID.randomUUID()
+        every { createSleepLogUseCase.execute(any()) } throws UserNotFoundException(userId)
+
+        assertThrows(UserNotFoundException::class.java) {
+            controller.createSleepLog(userId, validCreateRequest())
+        }
+    }
+
+    @Test
+    fun `should propagate domain rule violations from the create use case`() {
+        every {
+            createSleepLogUseCase.execute(any())
+        } throws IllegalArgumentException("Bed time and wake time cannot be identical")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            controller.createSleepLog(UUID.randomUUID(), validCreateRequest())
+        }
+    }
+
+    private fun validCreateRequest() = CreateSleepLogRequestDto(
+        sleepDate = LocalDate.of(2026, 8, 8),
+        bedTime = LocalTime.of(22, 0),
+        wakeTime = LocalTime.of(6, 0),
+        mood = SleepLog.WakeUpMood.GOOD
+    )
+
+    @Test
+    fun `should reject with 400 and the error contract when a required field is missing`() {
+        val userId = UUID.randomUUID()
+        val body = """
+            {
+              "sleepDate": "2026-09-06",
+              "bedTime": "22:00",
+              "wakeTime": "06:00"
+            }
+        """.trimIndent()
+
+        mockMvc.post("/v1/users/$userId/sleep-logs") {
+            contentType = MediaType.APPLICATION_JSON
+            content = body
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.status") { value(400) }
+            jsonPath("$.message") { value("Validation failed") }
+            jsonPath("$.errors") { value(hasItem("Mood is required")) }
+        }
+
+        verify { createSleepLogUseCase wasNot Called }
+    }
+
+    @Test
+    fun `should reject with 400 listing every missing field when the body is empty`() {
+        val userId = UUID.randomUUID()
+
+        mockMvc.post("/v1/users/$userId/sleep-logs") {
+            contentType = MediaType.APPLICATION_JSON
+            content = "{}"
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.status") { value(400) }
+            jsonPath("$.message") { value("Validation failed") }
+            jsonPath("$.errors") { value(hasItem("Sleep date is required")) }
+            jsonPath("$.errors") { value(hasItem("Bed time is required")) }
+            jsonPath("$.errors") { value(hasItem("Wake time is required")) }
+            jsonPath("$.errors") { value(hasItem("Mood is required")) }
+            jsonPath("$.errors.length()") { value(4) }
+        }
+
+        verify { createSleepLogUseCase wasNot Called }
+    }
+
+    @Test
+    fun `should reject with 400 when the body cannot be deserialized`() {
+        val userId = UUID.randomUUID()
+        val body = """
+            {
+              "sleepDate": "2026-09-06",
+              "bedTime": "22:00",
+              "wakeTime": "06:00",
+              "mood": "AMAZING"
+            }
+        """.trimIndent()
+
+        mockMvc.post("/v1/users/$userId/sleep-logs") {
+            contentType = MediaType.APPLICATION_JSON
+            content = body
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.status") { value(400) }
+            jsonPath("$.message") { value("Malformed request body") }
+            jsonPath("$.errors.length()") { value(0) }
+        }
+
+        verify { createSleepLogUseCase wasNot Called }
     }
 }
