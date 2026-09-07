@@ -1,4 +1,4 @@
-package com.noom.interview.fullstack.sleep.domain.repository
+package com.noom.interview.fullstack.sleep.domain.exception
 
 import java.util.*
 

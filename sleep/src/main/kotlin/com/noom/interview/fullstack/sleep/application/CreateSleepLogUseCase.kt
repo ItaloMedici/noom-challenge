@@ -1,8 +1,8 @@
 package com.noom.interview.fullstack.sleep.application
 
 import com.noom.interview.fullstack.sleep.domain.SleepLog
+import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.repository.SleepLogRepository
-import com.noom.interview.fullstack.sleep.domain.repository.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.repository.UserRepository
 import java.time.LocalDate
 import java.time.LocalTime
