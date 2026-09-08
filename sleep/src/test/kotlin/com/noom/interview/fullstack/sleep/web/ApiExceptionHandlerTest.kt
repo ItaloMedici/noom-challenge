@@ -2,6 +2,7 @@ package com.noom.interview.fullstack.sleep.web
 
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
+import com.noom.interview.fullstack.sleep.web.dto.FieldErrorDto
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.core.MethodParameter
@@ -47,7 +48,7 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    fun `should map MethodArgumentNotValidException to 400 with the field error list`() {
+    fun `should map MethodArgumentNotValidException to 400 with field-level errors`() {
         val bindingResult = MapBindingResult(mapOf<String, Any>(), "createSleepLogRequest")
         bindingResult.rejectValue("mood", "NotNull", "Mood is required")
         bindingResult.rejectValue("sleepDate", "NotNull", "Sleep date is required")
@@ -59,7 +60,10 @@ class ApiExceptionHandlerTest {
         assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
         assertThat(response.body!!.status).isEqualTo(400)
         assertThat(response.body!!.message).isEqualTo("Validation failed")
-        assertThat(response.body!!.errors)
+        assertThat(response.body!!.errors).hasSize(2)
+        assertThat(response.body!!.errors.map { it.field })
+            .containsExactlyInAnyOrder("mood", "sleepDate")
+        assertThat(response.body!!.errors.map { it.message })
             .containsExactlyInAnyOrder("Mood is required", "Sleep date is required")
     }
 
@@ -73,6 +77,21 @@ class ApiExceptionHandlerTest {
         assertThat(response.body!!.status).isEqualTo(400)
         assertThat(response.body!!.message).isEqualTo("Malformed request body")
         assertThat(response.body!!.message).doesNotContain("internal jackson detail")
+    }
+
+    @Test
+    fun `should provide field and message for each validation error`() {
+        val bindingResult = MapBindingResult(mapOf<String, Any>(), "createUserRequest")
+        bindingResult.rejectValue("username", "NotBlank", "Username is required")
+
+        val response = handler.handleMethodArgumentNotValid(
+            MethodArgumentNotValidException(methodParameter(), bindingResult)
+        )
+
+        val fieldError = response.body!!.errors.first()
+        assertThat(fieldError).isInstanceOf(FieldErrorDto::class.java)
+        assertThat(fieldError.field).isEqualTo("username")
+        assertThat(fieldError.message).isEqualTo("Username is required")
     }
 
     private fun methodParameter(): MethodParameter =

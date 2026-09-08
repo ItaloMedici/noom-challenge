@@ -17,4 +17,8 @@ class JpaUserRepository(
     override fun findById(id: UUID): User? {
         return springDataUserRepository.findById(id).map(UserJpaEntity::toDomain).orElse(null)
     }
+
+    override fun existsByUsername(username: String): Boolean {
+        return springDataUserRepository.existsByUsername(username)
+    }
 }

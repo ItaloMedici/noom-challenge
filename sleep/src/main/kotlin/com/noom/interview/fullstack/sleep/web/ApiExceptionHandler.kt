@@ -1,8 +1,10 @@
 package com.noom.interview.fullstack.sleep.web
 
+import com.noom.interview.fullstack.sleep.domain.exception.DuplicateUsernameException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.web.dto.ErrorResponseDto
+import com.noom.interview.fullstack.sleep.web.dto.FieldErrorDto
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -23,6 +25,12 @@ class ApiExceptionHandler {
             .status(HttpStatus.NOT_FOUND)
             .body(ErrorResponseDto(HttpStatus.NOT_FOUND.value(), ex.message ?: "User not found"))
 
+    @ExceptionHandler(DuplicateUsernameException::class)
+    fun handleDuplicateUsername(ex: DuplicateUsernameException): ResponseEntity<ErrorResponseDto> =
+        ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(ErrorResponseDto(HttpStatus.CONFLICT.value(), ex.message ?: "Username already taken"))
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<ErrorResponseDto> =
         badRequest(ex.message ?: "Invalid request")
@@ -31,7 +39,7 @@ class ApiExceptionHandler {
     fun handleMethodArgumentNotValid(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponseDto> =
         badRequest(
             message = "Validation failed",
-            errors = ex.bindingResult.fieldErrors.mapNotNull { it.defaultMessage },
+            errors = ex.bindingResult.fieldErrors.map { FieldErrorDto(it.field, it.defaultMessage ?: "Invalid value") }
         )
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
@@ -40,7 +48,7 @@ class ApiExceptionHandler {
 
     private fun badRequest(
         message: String,
-        errors: List<String> = emptyList(),
+        errors: List<FieldErrorDto> = emptyList(),
     ): ResponseEntity<ErrorResponseDto> =
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
