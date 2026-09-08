@@ -54,7 +54,7 @@ class SleepLogControllerTest {
         val body = response.body!!
         assertThat(body.rangeStart).isEqualTo(LocalDate.of(2026, 8, 8))
         assertThat(body.rangeEnd).isEqualTo(LocalDate.of(2026, 9, 6))
-        assertThat(body.averageTimeInBed).isEqualTo(Duration.ofHours(8))
+        assertThat(body.averageDurationInSeconds).isEqualTo(Duration.ofHours(8).seconds)
         assertThat(body.averageBedTime).isEqualTo(LocalTime.of(22, 0))
         assertThat(body.averageWakeTime).isEqualTo(LocalTime.of(6, 0))
         assertThat(body.moodFrequencies).containsEntry("GOOD", 1)
@@ -79,7 +79,7 @@ class SleepLogControllerTest {
         val body = response.body!!
         assertThat(body.rangeStart).isEqualTo(LocalDate.of(2026, 8, 8))
         assertThat(body.rangeEnd).isEqualTo(LocalDate.of(2026, 9, 6))
-        assertThat(body.averageTimeInBed).isNull()
+        assertThat(body.averageDurationInSeconds).isNull()
         assertThat(body.averageBedTime).isNull()
         assertThat(body.averageWakeTime).isNull()
         assertThat(body.moodFrequencies).isEmpty()
