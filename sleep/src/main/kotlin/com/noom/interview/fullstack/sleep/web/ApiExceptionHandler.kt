@@ -1,6 +1,7 @@
 package com.noom.interview.fullstack.sleep.web
 
 import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogException
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.noom.interview.fullstack.sleep.domain.exception.DuplicateUsernameException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
@@ -56,8 +57,21 @@ class ApiExceptionHandler {
         )
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleUnreadableBody(@Suppress("UNUSED_PARAMETER") ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponseDto> =
-        badRequest("Malformed request body")
+    fun handleUnreadableBody(ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponseDto> {
+        val fieldErrors = ex.malformedFieldNames().map { FieldErrorDto(it, "Malformed value") }
+        return badRequest("Malformed request body", fieldErrors)
+    }
+
+    private fun HttpMessageNotReadableException.malformedFieldNames(): List<String> {
+        var cause: Throwable? = this.cause
+        while (cause != null) {
+            if (cause is JsonMappingException) {
+                return listOfNotNull(cause.path.lastOrNull { it.fieldName != null }?.fieldName)
+            }
+            cause = cause.cause
+        }
+        return emptyList()
+    }
 
     private fun badRequest(
         message: String,
