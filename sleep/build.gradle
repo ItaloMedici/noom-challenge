@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-	id 'org.springframework.boot' version '2.7.17'
-	id 'io.spring.dependency-management' version '1.0.15.RELEASE'
-	id 'org.jetbrains.kotlin.jvm' version '1.6.21'
-	id 'org.jetbrains.kotlin.plugin.spring' version '1.6.21'
-	id 'org.jetbrains.kotlin.plugin.jpa' version '1.6.21'
-	id 'jacoco'
+    id 'org.springframework.boot' version '2.7.17'
+    id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.21'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.6.21'
+    id 'org.jetbrains.kotlin.plugin.jpa' version '1.6.21'
+    id 'jacoco'
 }
 
 ext.jacocoExcludes = ['com/noom/interview/fullstack/sleep/infrastructure/**']
@@ -15,74 +15,107 @@ group = 'com.noom.interview.fullstack'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	sourceCompatibility = '17'
+    sourceCompatibility = '17'
 }
 
 jacoco {
-	toolVersion = '0.8.13'
+    toolVersion = '0.8.13'
 }
 
 tasks.named('jacocoTestReport') {
-	dependsOn tasks.named('test')
-	reports {
-		html.required = true
-	}
-	classDirectories.setFrom(
-		files(classDirectories.files.collect { fileTree(dir: it, exclude: jacocoExcludes) })
-	)
+    dependsOn tasks.named('test')
+    reports {
+        html.required = true
+    }
+    classDirectories.setFrom(
+            files(classDirectories.files.collect { fileTree(dir: it, exclude: jacocoExcludes) })
+    )
 }
 
 tasks.named('jacocoTestCoverageVerification') {
-	dependsOn tasks.named('test')
-	classDirectories.setFrom(
-		files(classDirectories.files.collect { fileTree(dir: it, exclude: jacocoExcludes) })
-	)
-	violationRules {
-		rule {
-			limit {
-				minimum = 0.80
-			}
-		}
-	}
+    dependsOn tasks.named('test')
+    classDirectories.setFrom(
+            files(classDirectories.files.collect { fileTree(dir: it, exclude: jacocoExcludes) })
+    )
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.80
+            }
+        }
+    }
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
-	implementation 'org.flywaydb:flyway-core'
-	implementation 'org.jetbrains.kotlin:kotlin-reflect'
-	runtimeOnly 'org.postgresql:postgresql'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'io.mockk:mockk:1.13.13'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    runtimeOnly 'org.postgresql:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.mockk:mockk:1.13.13'
     implementation("org.springframework.boot:spring-boot-starter-validation")
 }
 
 tasks.withType(KotlinCompile) {
-	kotlinOptions {
-		freeCompilerArgs += '-Xjsr305=strict'
-		jvmTarget = '17'
-	}
+    kotlinOptions {
+        freeCompilerArgs += '-Xjsr305=strict'
+        jvmTarget = '17'
+    }
 }
 
 tasks.named('bootBuildImage') {
-	builder = 'paketobuildpacks/builder-jammy-base:latest'
+    builder = 'paketobuildpacks/builder-jammy-base:latest'
 }
 
 tasks.named('test') {
-	useJUnitPlatform {
-		if (project.hasProperty('excludeIntegrationTests')) {
-			excludeTags 'integration'
-		}
-	}
-	finalizedBy tasks.named('jacocoTestReport')
+    useJUnitPlatform {
+        // Exclude integration-tagged tests by default. Pass -PincludeIntegrationTests to run them.
+        if (!project.hasProperty('includeIntegrationTests')) {
+            excludeTags 'integration'
+        }
+    }
+    finalizedBy tasks.named('jacocoTestReport')
+}
+
+sourceSets {
+    integrationTest {
+        kotlin.srcDir 'src/integrationTest/kotlin'
+        resources.srcDir 'src/integrationTest/resources'
+        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs integration tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+    shouldRunAfter tasks.named('test')
+}
+
+// Opt-in: when -PincludeIntegrationTests is provided, make 'check' depend on integrationTest
+if (project.hasProperty('includeIntegrationTests')) {
+    tasks.named('check') {
+        dependsOn tasks.named('integrationTest')
+    }
 }
 
 tasks.named('check') {
-	dependsOn tasks.named('jacocoTestCoverageVerification')
+    dependsOn tasks.named('jacocoTestCoverageVerification')
 }
