@@ -1,0 +1,1959 @@
+{
+  "info": {
+    "_postman_id": "d20fcdb6-c716-4351-829c-97b341de350e",
+    "name": "Sleep Logger",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57983917"
+  },
+  "item": [
+    {
+      "name": "Sleep Logs",
+      "item": [
+        {
+          "name": "Create log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"sleepDate\": \"2026-09-07\",\n    \"bedTime\": \"23:00:00\",\n    \"wakeTime\": \"07:00:00\",\n    \"mood\": \"GOOD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{userId}}",
+                "sleep-logs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Feed Sleep Logs",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const moods = [\"BAD\", \"OK\", \"GOOD\"];",
+                  "",
+                  "function randomInt(min, max) {",
+                  "    return Math.floor(Math.random() * (max - min + 1)) + min;",
+                  "}",
+                  "",
+                  "function padTwo(n) {",
+                  "    return String(n).padStart(2, \"0\");",
+                  "}",
+                  "",
+                  "function dateFromDaysAgo(daysAgo) {",
+                  "    const d = new Date();",
+                  "    d.setDate(d.getDate() - daysAgo);",
+                  "    return `${d.getFullYear()}-${padTwo(d.getMonth() + 1)}-${padTwo(d.getDate())}`;",
+                  "}",
+                  "",
+                  "function randomTime(minHour, maxHour) {",
+                  "    const h = randomInt(minHour, maxHour);",
+                  "    const m = randomInt(0, 59);",
+                  "    const s = randomInt(0, 59);",
+                  "    return `${padTwo(h)}:${padTwo(m)}:${padTwo(s)}`;",
+                  "}",
+                  "",
+                  "// Only generate logs on the first run",
+                  "const existingIndex = pm.collectionVariables.get(\"_feedIndex\");",
+                  "",
+                  "if (existingIndex === undefined || existingIndex === null || existingIndex === \"\") {",
+                  "    const totalLogs = 90;",
+                  "    const logs = [];",
+                  "",
+                  "    // day 0 = today, day 89 = 89 days ago",
+                  "    for (let i = 0; i < totalLogs; i++) {",
+                  "        logs.push({",
+                  "            sleepDate: dateFromDaysAgo(i),",
+                  "            bedTime: randomTime(21, 23),",
+                  "            wakeTime: randomTime(5, 9),",
+                  "            mood: moods[randomInt(0, moods.length - 1)]",
+                  "        });",
+                  "    }",
+                  "",
+                  "    pm.collectionVariables.set(\"_feedLogs\", JSON.stringify(logs));",
+                  "    pm.collectionVariables.set(\"_feedIndex\", \"0\");",
+                  "}",
+                  "",
+                  "// Always set the current log as the request body",
+                  "const logs = JSON.parse(pm.collectionVariables.get(\"_feedLogs\"));",
+                  "const index = parseInt(pm.collectionVariables.get(\"_feedIndex\"));",
+                  "const current = logs[index];",
+                  "",
+                  "pm.request.body.update({",
+                  "    mode: \"raw\",",
+                  "    raw: JSON.stringify(current, null, 2),",
+                  "    options: { raw: { language: \"json\" } }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const logs = JSON.parse(pm.collectionVariables.get(\"_feedLogs\") || \"[]\");",
+                  "let index = parseInt(pm.collectionVariables.get(\"_feedIndex\") || \"0\") + 1;",
+                  "",
+                  "pm.collectionVariables.set(\"_feedIndex\", String(index));",
+                  "",
+                  "if (index < logs.length) {",
+                  "    const next = logs[index];",
+                  "    pm.request.body.update({",
+                  "        mode: \"raw\",",
+                  "        raw: JSON.stringify(next, null, 2),",
+                  "        options: { raw: { language: \"json\" } }",
+                  "    });",
+                  "    postman.setNextRequest(\"Feed Sleep Logs\");",
+                  "} else {",
+                  "    pm.collectionVariables.unset(\"_feedLogs\");",
+                  "    pm.collectionVariables.unset(\"_feedIndex\");",
+                  "    console.log(\"All 90 sleep logs created successfully!\");",
+                  "    postman.setNextRequest(null);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{userId}}",
+                "sleep-logs"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST \"{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs\" -H \"Content-Type: application/json\" -d '{}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Stats",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{userId}}",
+                "sleep-logs",
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "90",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Last Night",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/last-night",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{userId}}",
+                "sleep-logs",
+                "last-night"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const userId = response.id;",
+                  "",
+                  "if (userId) {",
+                  "    pm.collectionVariables.set(\"userId\", userId);",
+                  "    console.log(\"userId set to:\", userId);",
+                  "} else {",
+                  "    console.warn(\"No 'id' found in response body.\");",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"QA User\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "QA Tests",
+      "item": [
+        {
+          "name": "POST /users (Create User)",
+          "item": [
+            {
+              "name": "Missing username field",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));",
+                      "",
+                      "pm.test(\"Response has top-level message field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"message\", \"Validation failed\");",
+                      "});",
+                      "",
+                      "pm.test(\"Response has errors array\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"errors\").that.is.an(\"array\").with.length.above(0);",
+                      "});",
+                      "",
+                      "pm.test(\"Errors contain username validation failure\", () => {",
+                      "    const json = pm.response.json();",
+                      "    const usernameError = json.errors.find(e => e.field === \"username\");",
+                      "    pm.expect(usernameError).to.not.be.undefined;",
+                      "    pm.expect(usernameError.message).to.be.a(\"string\").and.not.empty;",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Username is null",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"username\": null }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Username is an empty string",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 422\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                      "});",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"username\": \"\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Username is a very long string (boundary test)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 422 for oversized username\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 413, 422]);",
+                      "});",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"username\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Extra unknown fields",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200 or 201 (extra fields ignored) OR 400 (strict validation)\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 422]);",
+                      "});",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"username\": \"ValidUser\", \"role\": \"admin\", \"isAdmin\": true }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Empty request body",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 Bad Request for empty body\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Malformed JSON body",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 Bad Request for malformed JSON\", () => pm.response.to.have.status(400));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"username\": \"Italo\"",
+                  "options": {
+                    "raw": {
+                      "language": "text"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "POST /users/:userId/sleep-logs (Create Log)",
+          "item": [
+            {
+              "name": "Missing all fields",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Invalid sleepDate format (not ISO date)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for invalid date format\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"07/09/2026\", \"bedTime\": \"23:00:00\", \"wakeTime\": \"07:00:00\", \"mood\": \"GOOD\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Invalid bedTime format",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for invalid bedTime format\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2026-09-07\", \"bedTime\": \"11pm\", \"wakeTime\": \"07:00:00\", \"mood\": \"GOOD\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Duplicated sleepDate",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 409 duplicated sleep log\", () => {",
+                      "    pm.expect(pm.response).to.have.status(409);",
+                      "});",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"sleepDate\": \"2026-09-07\",\n    \"bedTime\": \"07:00:00\",\n    \"wakeTime\": \"01:00:00\",\n    \"mood\": \"GOOD\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Invalid mood value (not in enum)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for invalid mood enum\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2026-09-07\", \"bedTime\": \"23:00:00\", \"wakeTime\": \"07:00:00\", \"mood\": \"AMAZING\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "mood is null",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for null mood\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2026-09-07\", \"bedTime\": \"23:00:00\", \"wakeTime\": \"07:00:00\", \"mood\": null }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Non-existent userId in path",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 404 for non-existent user\", () => pm.response.to.have.status(404));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2026-09-07\", \"bedTime\": \"23:00:00\", \"wakeTime\": \"07:00:00\", \"mood\": \"GOOD\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/00000000-0000-0000-0000-000000000000/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "00000000-0000-0000-0000-000000000000",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "userId is not a valid UUID (path injection)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 404 for invalid userId format\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                      "});",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2026-09-07\", \"bedTime\": \"23:00:00\", \"wakeTime\": \"07:00:00\", \"mood\": \"GOOD\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/not-a-valid-uuid/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "not-a-valid-uuid",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "sleepDate in the future (boundary)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 422 for future sleepDate\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                      "});",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2099-12-31\", \"bedTime\": \"23:00:00\", \"wakeTime\": \"07:00:00\", \"mood\": \"GOOD\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Missing mood field only",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for missing mood\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response body is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2026-09-07\", \"bedTime\": \"23:00:00\", \"wakeTime\": \"07:00:00\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Malformed JSON body",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for malformed JSON\", () => pm.response.to.have.status(400));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"sleepDate\": \"2026-09-07\"",
+                  "options": {
+                    "raw": {
+                      "language": "text"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{testUserId}}/sleep-logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{testUserId}}",
+                    "sleep-logs"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "GET /sleep-logs/last-night",
+          "item": [
+            {
+              "name": "Valid userId – response shape",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);",
+                      "pm.test(\"Response has id field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"id\");",
+                      "});",
+                      "pm.test(\"Response has userId field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"userId\");",
+                      "});",
+                      "pm.test(\"Response has sleepDate field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"sleepDate\");",
+                      "});",
+                      "pm.test(\"Response has bedTime field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"bedTime\");",
+                      "});",
+                      "pm.test(\"Response has wakeTime field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"wakeTime\");",
+                      "});",
+                      "pm.test(\"Response has mood field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"mood\");",
+                      "    pm.expect(json.mood).to.be.oneOf([\"GOOD\", \"BAD\", \"OK\", \"NEUTRAL\"]);",
+                      "});",
+                      "pm.test(\"Response has durationInSeconds field\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"durationInSeconds\");",
+                      "    pm.expect(json.durationInSeconds).to.be.a(\"number\");",
+                      "});",
+                      "pm.test(\"durationInSeconds is positive\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.durationInSeconds).to.be.above(0);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/last-night",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "last-night"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/last-night\""
+              },
+              "response": []
+            },
+            {
+              "name": "Non-existent userId",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 404 for non-existent user\", () => pm.response.to.have.status(404));"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/00000000-0000-0000-0000-000000000000/sleep-logs/last-night",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "00000000-0000-0000-0000-000000000000",
+                    "sleep-logs",
+                    "last-night"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/00000000-0000-0000-0000-000000000000/sleep-logs/last-night\""
+              },
+              "response": []
+            },
+            {
+              "name": "Invalid UUID in userId path",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 404 for invalid UUID\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                      "});",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/not-a-valid-uuid/sleep-logs/last-night",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "not-a-valid-uuid",
+                    "sleep-logs",
+                    "last-night"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/not-a-valid-uuid/sleep-logs/last-night\""
+              },
+              "response": []
+            },
+            {
+              "name": "SQL injection in userId path",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 404 for SQL injection attempt\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                      "});",
+                      "pm.test(\"Response does not expose internal error\", () => {",
+                      "    const body = pm.response.text();",
+                      "    pm.expect(body).to.not.include(\"SQL\");",
+                      "    pm.expect(body).to.not.include(\"syntax error\");",
+                      "    pm.expect(body).to.not.include(\"stack trace\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/1' OR '1'='1/sleep-logs/last-night",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "1' OR '1'='1",
+                    "sleep-logs",
+                    "last-night"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/1' OR '1'='1/sleep-logs/last-night\""
+              },
+              "response": []
+            },
+            {
+              "name": "Special characters in userId path",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 404 for special characters in path\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                      "});",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/<script>alert(1)</script>/sleep-logs/last-night",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "<script>alert(1)<",
+                    "script>",
+                    "sleep-logs",
+                    "last-night"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/<script>alert(1)</script>/sleep-logs/last-night\""
+              },
+              "response": []
+            },
+            {
+              "name": "Correct response time",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Response time is under 2000ms\", () => {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                      "});",
+                      "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/last-night",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "last-night"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/last-night\""
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "GET /sleep-logs/stats",
+          "item": [
+            {
+              "name": "No query params – response shape",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);",
+                      "pm.test(\"Response has rangeStart\", () => {",
+                      "    pm.expect(pm.response.json()).to.have.property(\"rangeStart\");",
+                      "});",
+                      "pm.test(\"Response has rangeEnd\", () => {",
+                      "    pm.expect(pm.response.json()).to.have.property(\"rangeEnd\");",
+                      "});",
+                      "pm.test(\"averageDurationInSeconds is a number\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"averageDurationInSeconds\");",
+                      "    pm.expect(json.averageDurationInSeconds).to.be.a(\"number\");",
+                      "});",
+                      "pm.test(\"moodFrequencies is an object\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"moodFrequencies\");",
+                      "    pm.expect(json.moodFrequencies).to.be.an(\"object\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats\""
+              },
+              "response": []
+            },
+            {
+              "name": "days=30",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200 for days=30\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);",
+                      "pm.test(\"rangeStart is earlier than rangeEnd\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(new Date(json.rangeStart) < new Date(json.rangeEnd)).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "30"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=30\""
+              },
+              "response": []
+            },
+            {
+              "name": "days=90",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200 for days=90\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);",
+                      "pm.test(\"rangeStart is earlier than rangeEnd\", () => {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(new Date(json.rangeStart) < new Date(json.rangeEnd)).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=90",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "90"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=90\""
+              },
+              "response": []
+            },
+            {
+              "name": "days=0 (boundary – zero days)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 422 for days=0\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                      "});",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=0",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "0"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=0\""
+              },
+              "response": []
+            },
+            {
+              "name": "days=-1 (negative value)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 422 for negative days\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                      "});",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=-1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "-1"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=-1\""
+              },
+              "response": []
+            },
+            {
+              "name": "days=abc (non-numeric string)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for non-numeric days\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=abc",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "abc"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=abc\""
+              },
+              "response": []
+            },
+            {
+              "name": "days=1.5 (float value)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 422 for float days\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                      "});",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=1.5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "1.5"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=1.5\""
+              },
+              "response": []
+            },
+            {
+              "name": "days=99999 (very large number)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400, 422, or 200 for very large days\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 422]);",
+                      "});",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=99999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "99999"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=99999\""
+              },
+              "response": []
+            },
+            {
+              "name": "Non-existent userId",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 404 for non-existent user\", () => pm.response.to.have.status(404));",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/00000000-0000-0000-0000-000000000000/sleep-logs/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "00000000-0000-0000-0000-000000000000",
+                    "sleep-logs",
+                    "stats"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/00000000-0000-0000-0000-000000000000/sleep-logs/stats\""
+              },
+              "response": []
+            },
+            {
+              "name": "Invalid UUID in userId path",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 or 404 for invalid UUID in userId\", () => {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                      "});",
+                      "pm.test(\"Response is JSON\", () => pm.response.to.be.json);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/not-a-valid-uuid/sleep-logs/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "not-a-valid-uuid",
+                    "sleep-logs",
+                    "stats"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/not-a-valid-uuid/sleep-logs/stats\""
+              },
+              "response": []
+            },
+            {
+              "name": "days injected with SQL",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 400 for SQL injection in days param\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Response does not expose internal error\", () => {",
+                      "    const body = pm.response.text();",
+                      "    pm.expect(body).to.not.include(\"SQL\");",
+                      "    pm.expect(body).to.not.include(\"syntax error\");",
+                      "    pm.expect(body).to.not.include(\"stack trace\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=1%20OR%201%3D1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "1%20OR%201%3D1"
+                    }
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats?days=1%20OR%201%3D1\""
+              },
+              "response": []
+            },
+            {
+              "name": "Correct response time",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Response time is under 2000ms\", () => {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                      "});",
+                      "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "users",
+                    "{{userId}}",
+                    "sleep-logs",
+                    "stats"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET \"{{baseUrl}}/v1/users/{{userId}}/sleep-logs/stats\""
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "testUserId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    }
+  ]
+}
