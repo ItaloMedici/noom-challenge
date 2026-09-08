@@ -13,14 +13,23 @@ import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceed
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.web.dto.CreateSleepLogRequestDto
 import com.noom.interview.fullstack.sleep.web.dto.FieldErrorDto
+import io.mockk.every
+import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
+import org.hamcrest.Matchers
 import org.junit.jupiter.api.Test
 import org.springframework.core.MethodParameter
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.mock.http.MockHttpInputMessage
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.validation.MapBindingResult
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import java.util.*
 
 class ApiExceptionHandlerTest {
@@ -74,6 +83,67 @@ class ApiExceptionHandlerTest {
         assertThat(response.body!!.message).contains(sleepDate.toString())
         assertThat(response.body!!.errors)
             .containsExactly(FieldErrorDto("sleepDate", "Sleep log already exists on this date"))
+    }
+
+    @Test
+    fun `should map DataIntegrityViolationException to 409 with standard envelope`() {
+        val response = handler.handleDataIntegrityViolation(
+            DataIntegrityViolationException("unique constraint users_username_key")
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.CONFLICT)
+        assertThat(response.body!!.status).isEqualTo(409)
+        assertThat(response.body!!.message).isEqualTo("Resource already exists")
+        assertThat(response.body!!.errors).isEmpty()
+    }
+
+    @Test
+    fun `should map MethodArgumentTypeMismatchException to 400 without leaking NumberFormatException message`() {
+        val response = handler.handleTypeMismatch(
+            MethodArgumentTypeMismatchException(
+                "abc",
+                Long::class.javaObjectType,
+                "days",
+                methodParameter(),
+                NumberFormatException("For input string: \"abc\""),
+            )
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.status).isEqualTo(400)
+        assertThat(response.body!!.message).isEqualTo("Invalid query parameter")
+        assertThat(response.body!!.message).doesNotContain("For input string")
+        assertThat(response.body!!.errors)
+            .containsExactly(FieldErrorDto("days", "days must be a positive integer"))
+    }
+
+    @Test
+    fun `should map type mismatch of non-numeric type to 400 with generic field message`() {
+        val response = handler.handleTypeMismatch(
+            MethodArgumentTypeMismatchException(
+                "not-a-uuid",
+                UUID::class.java,
+                "userId",
+                methodParameter(),
+                IllegalArgumentException("Invalid UUID string"),
+            )
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.message).isEqualTo("Invalid query parameter")
+        assertThat(response.body!!.errors)
+            .containsExactly(FieldErrorDto("userId", "userId has an invalid value"))
+    }
+
+    @Test
+    fun `should map raw NumberFormatException to 400 without leaking internals`() {
+        val response = handler.handleNumberFormat(NumberFormatException("For input string: \"abc\""))
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.status).isEqualTo(400)
+        assertThat(response.body!!.message).isEqualTo("Invalid query parameter")
+        assertThat(response.body!!.message).doesNotContain("For input string")
+        assertThat(response.body!!.errors).isEmpty()
     }
 
     @Test
@@ -185,6 +255,38 @@ class ApiExceptionHandlerTest {
         assertThat(fieldError).isInstanceOf(FieldErrorDto::class.java)
         assertThat(fieldError.field).isEqualTo("username")
         assertThat(fieldError.message).isEqualTo("Username is required")
+    }
+
+    @Test
+    fun `should map DataIntegrityViolationException to 409 with the standard error envelope`() {
+        every { createUserUseCase.execute(any()) } throws
+            DataIntegrityViolationException("unique constraint users_username_key")
+
+        userMockMvc.post("/v1/users") {
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"username": "race-${UUID.randomUUID()}"}"""
+        }.andExpect {
+            status { isConflict() }
+            jsonPath("$.status") { value(409) }
+            jsonPath("$.message") { value("Resource already exists") }
+            jsonPath("$.errors") { isEmpty() }
+        }
+    }
+
+    @Test
+    fun `should map type mismatch on days param to 400 with clean message and days field error`() {
+        val userId = UUID.randomUUID()
+
+        sleepLogMockMvc.get("/v1/users/$userId/sleep-logs/stats") {
+            param("days", "abc")
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.status") { value(400) }
+            jsonPath("$.message") { value("Invalid query parameter") }
+            jsonPath("$.message", Matchers.not(Matchers.containsString("For input string")))
+            jsonPath("$.errors[0].field") { value("days") }
+            jsonPath("$.errors[0].message") { value("days must be a positive integer") }
+        }
     }
 
     @Test
