@@ -33,6 +33,12 @@ class JpaSleepLogRepository(
             ?.let(SleepLogJpaEntity::toDomain)
     }
 
+    override fun findLatestByUserId(userId: UUID): SleepLog? {
+        return springDataSleepLogRepository
+            .findTopByUserIdOrderBySleepDateDesc(userId)
+            ?.let(SleepLogJpaEntity::toDomain)
+    }
+
     override fun existsByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): Boolean {
         return springDataSleepLogRepository.existsByUserIdAndSleepDate(userId, sleepDate)
     }

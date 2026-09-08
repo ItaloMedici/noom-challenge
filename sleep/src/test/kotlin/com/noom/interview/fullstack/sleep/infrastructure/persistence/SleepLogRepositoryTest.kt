@@ -165,6 +165,29 @@ class SleepLogRepositoryTest {
     }
 
     @Test
+    fun `findLatestByUserId should return the log with the latest sleepDate when multiple logs exist`() {
+        val fiveDaysAgoLog =
+            sleepLogRepository.save(
+                sleepLog(userId, LocalDate.now().minusDays(5), LocalTime.of(22, 0), LocalTime.of(6, 0))
+            )
+        val todayLog =
+            sleepLogRepository.save(sleepLog(userId, LocalDate.now(), LocalTime.of(23, 0), LocalTime.of(7, 0)))
+
+        val found = sleepLogRepository.findLatestByUserId(userId)
+
+        assertThat(found).isNotNull
+        assertThat(found!!.id).isEqualTo(todayLog.id)
+        assertThat(found.id).isNotEqualTo(fiveDaysAgoLog.id)
+    }
+
+    @Test
+    fun `findLatestByUserId should return null when the user has no sleep logs`() {
+        val found = sleepLogRepository.findLatestByUserId(userId)
+
+        assertThat(found).isNull()
+    }
+
+    @Test
     fun `existsByUserIdAndSleepDate should return true when sleep log exists`() {
         val sleepDate = LocalDate.now().minusDays(1)
         sleepLogRepository.save(sleepLog(userId, sleepDate, LocalTime.of(22, 0), LocalTime.of(6, 0)))

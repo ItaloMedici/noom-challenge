@@ -14,5 +14,7 @@ interface SpringDataSleepLogRepository : JpaRepository<SleepLogJpaEntity, UUID> 
 
     fun findByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): SleepLogJpaEntity?
 
+    fun findTopByUserIdOrderBySleepDateDesc(userId: UUID): SleepLogJpaEntity?
+
     fun existsByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): Boolean
 }
