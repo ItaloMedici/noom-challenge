@@ -303,7 +303,9 @@ class SleepLogControllerTest {
             status { isBadRequest() }
             jsonPath("$.status") { value(400) }
             jsonPath("$.message") { value("Malformed request body") }
-            jsonPath("$.errors.length()") { value(0) }
+            jsonPath("$.errors.length()") { value(1) }
+            jsonPath("$.errors[0].field") { value("mood") }
+            jsonPath("$.errors[0].message") { value("Malformed value") }
         }
 
         verify { createSleepLogUseCase wasNot Called }

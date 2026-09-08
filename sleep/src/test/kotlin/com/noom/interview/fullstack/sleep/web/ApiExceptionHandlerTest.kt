@@ -1,5 +1,7 @@
 package com.noom.interview.fullstack.sleep.web
 
+import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
@@ -93,6 +95,59 @@ class ApiExceptionHandlerTest {
         assertThat(response.body!!.status).isEqualTo(400)
         assertThat(response.body!!.message).isEqualTo("Malformed request body")
         assertThat(response.body!!.message).doesNotContain("internal jackson detail")
+        assertThat(response.body!!.errors).isEmpty()
+    }
+
+    @Test
+    fun `should report offending field when body is unreadable because of a field value`() {
+        val cause = InvalidFormatException.from(
+            null,
+            "internal jackson detail",
+            "AMAZING",
+            SleepLog.WakeUpMood::class.java,
+        )
+        cause.prependPath(CreateSleepLogRequestDto::class.java, "mood")
+        val response = handler.handleUnreadableBody(
+            HttpMessageNotReadableException("JSON parse error", cause, MockHttpInputMessage(ByteArray(0)))
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.status).isEqualTo(400)
+        assertThat(response.body!!.message).isEqualTo("Malformed request body")
+        assertThat(response.body!!.message).doesNotContain("internal jackson detail")
+        assertThat(response.body!!.errors)
+            .containsExactly(FieldErrorDto("mood", "Malformed value"))
+    }
+
+    @Test
+    fun `should report most specific nested field when body is unreadable`() {
+        val cause = InvalidFormatException.from(
+            null,
+            "internal jackson detail",
+            "AMAZING",
+            SleepLog.WakeUpMood::class.java,
+        )
+        cause.prependPath(CreateSleepLogRequestDto::class.java, "mood")
+        cause.prependPath(Any(), "log")
+        val response = handler.handleUnreadableBody(
+            HttpMessageNotReadableException("JSON parse error", cause, MockHttpInputMessage(ByteArray(0)))
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.errors)
+            .containsExactly(FieldErrorDto("mood", "Malformed value"))
+    }
+
+    @Test
+    fun `should return empty errors when unreadable body has no field information`() {
+        val cause = JsonMappingException.from(null as com.fasterxml.jackson.core.JsonParser?, "unexpected token")
+        val response = handler.handleUnreadableBody(
+            HttpMessageNotReadableException("JSON parse error", cause, MockHttpInputMessage(ByteArray(0)))
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.message).isEqualTo("Malformed request body")
+        assertThat(response.body!!.errors).isEmpty()
     }
 
     @Test
