@@ -1,6 +1,7 @@
 package com.noom.interview.fullstack.sleep.web
 
 import com.noom.interview.fullstack.sleep.application.CreateSleepLogUseCase
+import com.noom.interview.fullstack.sleep.application.GetLastNightSleepUseCase
 import com.noom.interview.fullstack.sleep.application.GetSleepStatisticsUseCase
 import com.noom.interview.fullstack.sleep.application.GetStatsCommand
 import com.noom.interview.fullstack.sleep.web.dto.CreateSleepLogRequestDto
@@ -17,6 +18,7 @@ import javax.validation.Valid
 class SleepLogController(
     private val getSleepStatisticsUseCase: GetSleepStatisticsUseCase,
     private val createSleepLogUseCase: CreateSleepLogUseCase,
+    private val getLastNightSleepUseCase: GetLastNightSleepUseCase,
 ) {
 
     @PostMapping()
@@ -42,5 +44,15 @@ class SleepLogController(
             GetStatsCommand(userId = userId, days = days)
         )
         return ResponseEntity.ok(SleepStatsResponseDto.from(calculation))
+    }
+
+    @GetMapping("/last-night")
+    fun getLastNightSleep(
+        @PathVariable userId: UUID,
+    ): ResponseEntity<SleepLogResponseDto> {
+        val sleepLog = getLastNightSleepUseCase.execute(userId)
+            ?: return ResponseEntity.notFound().build()
+
+        return ResponseEntity.ok(SleepLogResponseDto.from(sleepLog))
     }
 }
