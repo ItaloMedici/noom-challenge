@@ -20,7 +20,7 @@ class CreateSleepLogUseCase(
             ?: throw UserNotFoundException(command.userId)
 
         if (sleepLogRepository.existsByUserIdAndSleepDate(command.userId, command.sleepDate)) {
-            throw DuplicateSleepLogException(command.userId, command.sleepDate)
+            throw DuplicateSleepLogException(command.sleepDate)
         }
 
         val sleepLog =

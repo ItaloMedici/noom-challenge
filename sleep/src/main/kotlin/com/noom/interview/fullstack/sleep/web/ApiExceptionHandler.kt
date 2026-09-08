@@ -36,7 +36,13 @@ class ApiExceptionHandler {
     fun handleDuplicateSleepLog(ex: DuplicateSleepLogException): ResponseEntity<ErrorResponseDto> =
         ResponseEntity
             .status(HttpStatus.CONFLICT)
-            .body(ErrorResponseDto(HttpStatus.CONFLICT.value(), ex.message ?: "Sleep log already exists"))
+            .body(
+                ErrorResponseDto(
+                    status = HttpStatus.CONFLICT.value(),
+                    message = ex.message ?: "Sleep log already exists",
+                    errors = listOf(FieldErrorDto("sleepDate", "Sleep log already exists on this date")),
+                )
+            )
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<ErrorResponseDto> =

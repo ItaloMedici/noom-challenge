@@ -102,7 +102,6 @@ class CreateSleepLogUseCaseTest {
             useCase.execute(command)
         }
 
-        assertThat(execution.userId).isEqualTo(user.id)
         assertThat(execution.sleepDate).isEqualTo(sleepDate)
         verify(exactly = 1) { userRepository.findById(user.id) }
         verify(exactly = 1) { sleepLogRepository.existsByUserIdAndSleepDate(user.id, sleepDate) }

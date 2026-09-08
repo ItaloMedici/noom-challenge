@@ -40,15 +40,16 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    fun `should map DuplicateSleepLogException to 409`() {
+    fun `should map DuplicateSleepLogException to 409 with sleepDate field error`() {
         val userId = UUID.randomUUID()
         val sleepDate = java.time.LocalDate.now().minusDays(1)
-        val response = handler.handleDuplicateSleepLog(DuplicateSleepLogException(userId, sleepDate))
+        val response = handler.handleDuplicateSleepLog(DuplicateSleepLogException(sleepDate))
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.CONFLICT)
         assertThat(response.body!!.status).isEqualTo(409)
-        assertThat(response.body!!.message).contains(userId.toString()).contains(sleepDate.toString())
-        assertThat(response.body!!.errors).isEmpty()
+        assertThat(response.body!!.message).contains(sleepDate.toString())
+        assertThat(response.body!!.errors)
+            .containsExactly(FieldErrorDto("sleepDate", "Sleep log already exists on this date"))
     }
 
     @Test
