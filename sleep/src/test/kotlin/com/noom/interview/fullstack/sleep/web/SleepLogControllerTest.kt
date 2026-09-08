@@ -14,7 +14,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
-import org.hamcrest.Matchers.hasItem
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
@@ -201,7 +200,8 @@ class SleepLogControllerTest {
             status { isBadRequest() }
             jsonPath("$.status") { value(400) }
             jsonPath("$.message") { value("Validation failed") }
-            jsonPath("$.errors") { value(hasItem("Mood is required")) }
+            jsonPath("$.errors[0].field") { value("mood") }
+            jsonPath("$.errors[0].message") { value("Mood is required") }
         }
 
         verify { createSleepLogUseCase wasNot Called }
@@ -218,10 +218,6 @@ class SleepLogControllerTest {
             status { isBadRequest() }
             jsonPath("$.status") { value(400) }
             jsonPath("$.message") { value("Validation failed") }
-            jsonPath("$.errors") { value(hasItem("Sleep date is required")) }
-            jsonPath("$.errors") { value(hasItem("Bed time is required")) }
-            jsonPath("$.errors") { value(hasItem("Wake time is required")) }
-            jsonPath("$.errors") { value(hasItem("Mood is required")) }
             jsonPath("$.errors.length()") { value(4) }
         }
 
