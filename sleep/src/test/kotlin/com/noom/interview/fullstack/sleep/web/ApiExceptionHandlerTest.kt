@@ -1,7 +1,10 @@
 package com.noom.interview.fullstack.sleep.web
 
+import com.noom.interview.fullstack.sleep.domain.SleepLog
+import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
+import com.noom.interview.fullstack.sleep.web.dto.CreateSleepLogRequestDto
 import com.noom.interview.fullstack.sleep.web.dto.FieldErrorDto
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -33,6 +36,18 @@ class ApiExceptionHandlerTest {
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
         assertThat(response.body!!.status).isEqualTo(404)
+        assertThat(response.body!!.errors).isEmpty()
+    }
+
+    @Test
+    fun `should map DuplicateSleepLogException to 409`() {
+        val userId = UUID.randomUUID()
+        val sleepDate = java.time.LocalDate.now().minusDays(1)
+        val response = handler.handleDuplicateSleepLog(DuplicateSleepLogException(userId, sleepDate))
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.CONFLICT)
+        assertThat(response.body!!.status).isEqualTo(409)
+        assertThat(response.body!!.message).contains(userId.toString()).contains(sleepDate.toString())
         assertThat(response.body!!.errors).isEmpty()
     }
 
