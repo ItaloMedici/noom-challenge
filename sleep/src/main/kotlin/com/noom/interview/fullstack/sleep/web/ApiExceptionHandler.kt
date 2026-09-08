@@ -1,5 +1,6 @@
 package com.noom.interview.fullstack.sleep.web
 
+import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.domain.exception.DuplicateUsernameException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
@@ -30,6 +31,18 @@ class ApiExceptionHandler {
         ResponseEntity
             .status(HttpStatus.CONFLICT)
             .body(ErrorResponseDto(HttpStatus.CONFLICT.value(), ex.message ?: "Username already taken"))
+
+    @ExceptionHandler(DuplicateSleepLogException::class)
+    fun handleDuplicateSleepLog(ex: DuplicateSleepLogException): ResponseEntity<ErrorResponseDto> =
+        ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(
+                ErrorResponseDto(
+                    status = HttpStatus.CONFLICT.value(),
+                    message = ex.message ?: "Sleep log already exists",
+                    errors = listOf(FieldErrorDto("sleepDate", "Sleep log already exists on this date")),
+                )
+            )
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<ErrorResponseDto> =

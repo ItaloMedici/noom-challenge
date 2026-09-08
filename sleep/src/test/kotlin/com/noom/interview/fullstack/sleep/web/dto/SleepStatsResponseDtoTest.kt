@@ -28,7 +28,7 @@ class SleepStatsResponseDtoTest {
 
         assertThat(dto.rangeStart).isEqualTo(rangeStart)
         assertThat(dto.rangeEnd).isEqualTo(rangeEnd)
-        assertThat(dto.averageTimeInBed).isEqualTo(Duration.ofHours(8))
+        assertThat(dto.averageDurationInSeconds).isEqualTo(Duration.ofHours(8).seconds)
         assertThat(dto.averageBedTime).isEqualTo(LocalTime.of(22, 0))
         assertThat(dto.averageWakeTime).isEqualTo(LocalTime.of(6, 0))
         assertThat(dto.moodFrequencies).containsEntry("GOOD", 1)
@@ -44,7 +44,7 @@ class SleepStatsResponseDtoTest {
 
         assertThat(dto.rangeStart).isEqualTo(LocalDate.of(2026, 8, 8))
         assertThat(dto.rangeEnd).isEqualTo(LocalDate.of(2026, 9, 6))
-        assertThat(dto.averageTimeInBed).isNull()
+        assertThat(dto.averageDurationInSeconds).isNull()
         assertThat(dto.averageBedTime).isNull()
         assertThat(dto.averageWakeTime).isNull()
         assertThat(dto.moodFrequencies).isEmpty()
@@ -59,7 +59,7 @@ class SleepStatsResponseDtoTest {
 
         assertThat(dto.rangeStart).isEqualTo(rangeStart)
         assertThat(dto.rangeEnd).isEqualTo(rangeEnd)
-        assertThat(dto.averageTimeInBed).isNull()
+        assertThat(dto.averageDurationInSeconds).isNull()
         assertThat(dto.averageBedTime).isNull()
         assertThat(dto.averageWakeTime).isNull()
         assertThat(dto.moodFrequencies).isEmpty()

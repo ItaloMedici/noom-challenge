@@ -14,4 +14,6 @@ interface SleepLogRepository {
     ): List<SleepLog>
 
     fun findByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): SleepLog?
+
+    fun existsByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): Boolean
 }

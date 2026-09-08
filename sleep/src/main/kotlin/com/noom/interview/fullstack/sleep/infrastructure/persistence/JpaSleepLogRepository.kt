@@ -32,4 +32,8 @@ class JpaSleepLogRepository(
             .findByUserIdAndSleepDate(userId, sleepDate)
             ?.let(SleepLogJpaEntity::toDomain)
     }
+
+    override fun existsByUserIdAndSleepDate(userId: UUID, sleepDate: LocalDate): Boolean {
+        return springDataSleepLogRepository.existsByUserIdAndSleepDate(userId, sleepDate)
+    }
 }

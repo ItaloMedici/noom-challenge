@@ -2,6 +2,7 @@ package com.noom.interview.fullstack.sleep.application
 
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.User
+import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.repository.SleepLogRepository
 import com.noom.interview.fullstack.sleep.domain.repository.UserRepository
@@ -36,6 +37,7 @@ class CreateSleepLogUseCaseTest {
         )
 
         every { userRepository.findById(user.id) } returns user
+        every { sleepLogRepository.existsByUserIdAndSleepDate(user.id, sleepDate) } returns false
 
         val savedSleepLogSlot = slot<SleepLog>()
         every { sleepLogRepository.save(capture(savedSleepLogSlot)) } answers {
@@ -78,6 +80,31 @@ class CreateSleepLogUseCaseTest {
 
         assertThat(execution.userId).isEqualTo(unknownUserId)
         verify(exactly = 1) { userRepository.findById(unknownUserId) }
+        verify(exactly = 0) { sleepLogRepository.save(any()) }
+    }
+
+    @Test
+    fun `should throw when sleep log already exists for user and date`() {
+        val user = User.create("italo")
+        val sleepDate = LocalDate.now().minusDays(1)
+        val command = CreateSleepLogCommand(
+            userId = user.id,
+            sleepDate = sleepDate,
+            bedTime = LocalTime.of(22, 0),
+            wakeTime = LocalTime.of(6, 0),
+            mood = SleepLog.WakeUpMood.GOOD,
+        )
+
+        every { userRepository.findById(user.id) } returns user
+        every { sleepLogRepository.existsByUserIdAndSleepDate(user.id, sleepDate) } returns true
+
+        val execution = assertThrows(DuplicateSleepLogException::class.java) {
+            useCase.execute(command)
+        }
+
+        assertThat(execution.sleepDate).isEqualTo(sleepDate)
+        verify(exactly = 1) { userRepository.findById(user.id) }
+        verify(exactly = 1) { sleepLogRepository.existsByUserIdAndSleepDate(user.id, sleepDate) }
         verify(exactly = 0) { sleepLogRepository.save(any()) }
     }
 }

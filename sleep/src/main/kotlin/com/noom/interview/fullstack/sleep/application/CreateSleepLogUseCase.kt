@@ -2,6 +2,7 @@ package com.noom.interview.fullstack.sleep.application
 
 import com.noom.interview.fullstack.sleep.common.annotation.UseCase
 import com.noom.interview.fullstack.sleep.domain.SleepLog
+import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.repository.SleepLogRepository
 import com.noom.interview.fullstack.sleep.domain.repository.UserRepository
@@ -17,6 +18,10 @@ class CreateSleepLogUseCase(
     fun execute(command: CreateSleepLogCommand): SleepLog {
         val user = userRepository.findById(command.userId)
             ?: throw UserNotFoundException(command.userId)
+
+        if (sleepLogRepository.existsByUserIdAndSleepDate(command.userId, command.sleepDate)) {
+            throw DuplicateSleepLogException(command.sleepDate)
+        }
 
         val sleepLog =
             SleepLog.create(

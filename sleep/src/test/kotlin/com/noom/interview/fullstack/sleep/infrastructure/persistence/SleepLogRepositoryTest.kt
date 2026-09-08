@@ -164,6 +164,25 @@ class SleepLogRepositoryTest {
         assertThat(remaining).isEmpty()
     }
 
+    @Test
+    fun `existsByUserIdAndSleepDate should return true when sleep log exists`() {
+        val sleepDate = LocalDate.now().minusDays(1)
+        sleepLogRepository.save(sleepLog(userId, sleepDate, LocalTime.of(22, 0), LocalTime.of(6, 0)))
+
+        val exists = sleepLogRepository.existsByUserIdAndSleepDate(userId, sleepDate)
+
+        assertThat(exists).isTrue
+    }
+
+    @Test
+    fun `existsByUserIdAndSleepDate should return false when sleep log does not exist`() {
+        val sleepDate = LocalDate.now().minusDays(1)
+
+        val exists = sleepLogRepository.existsByUserIdAndSleepDate(userId, sleepDate)
+
+        assertThat(exists).isFalse
+    }
+
     private fun sleepLog(
         userId: UUID,
         sleepDate: LocalDate,
