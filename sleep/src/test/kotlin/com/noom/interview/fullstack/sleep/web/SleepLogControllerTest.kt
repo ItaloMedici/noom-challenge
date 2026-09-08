@@ -2,6 +2,7 @@ package com.noom.interview.fullstack.sleep.web
 
 import com.noom.interview.fullstack.sleep.application.CreateSleepLogCommand
 import com.noom.interview.fullstack.sleep.application.CreateSleepLogUseCase
+import com.noom.interview.fullstack.sleep.application.GetLastNightSleepUseCase
 import com.noom.interview.fullstack.sleep.application.GetSleepStatisticsUseCase
 import com.noom.interview.fullstack.sleep.application.GetStatsCommand
 import com.noom.interview.fullstack.sleep.domain.SleepLog
@@ -29,7 +30,12 @@ class SleepLogControllerTest {
 
     private val getSleepStatisticsUseCase = mockk<GetSleepStatisticsUseCase>()
     private val createSleepLogUseCase = mockk<CreateSleepLogUseCase>()
-    private val controller = SleepLogController(getSleepStatisticsUseCase, createSleepLogUseCase)
+    private val getLastNightSleepUseCase = mockk<GetLastNightSleepUseCase>()
+    private val controller = SleepLogController(
+        getSleepStatisticsUseCase,
+        createSleepLogUseCase,
+        getLastNightSleepUseCase,
+    )
     private val mockMvc = MockMvcBuilders
         .standaloneSetup(controller)
         .setControllerAdvice(ApiExceptionHandler())
@@ -181,6 +187,60 @@ class SleepLogControllerTest {
         wakeTime = LocalTime.of(6, 0),
         mood = SleepLog.WakeUpMood.GOOD
     )
+
+    @Test
+    fun `should return 200 with the last night sleep log`() {
+        val userId = UUID.randomUUID()
+        val lastNightSleepLog = SleepLog(
+            id = UUID.randomUUID(),
+            userId = userId,
+            sleepDate = LocalDate.now().minusDays(1),
+            bedTime = LocalTime.of(22, 0),
+            wakeTime = LocalTime.of(6, 0),
+            mood = SleepLog.WakeUpMood.GOOD
+        )
+
+        every { getLastNightSleepUseCase.execute(userId) } returns lastNightSleepLog
+
+        val response = controller.getLastNightSleep(userId)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+        val body = response.body!!
+        assertThat(body.id).isEqualTo(lastNightSleepLog.id)
+        assertThat(body.userId).isEqualTo(userId)
+        assertThat(body.sleepDate).isEqualTo(LocalDate.now().minusDays(1))
+        assertThat(body.bedTime).isEqualTo(LocalTime.of(22, 0))
+        assertThat(body.wakeTime).isEqualTo(LocalTime.of(6, 0))
+        assertThat(body.mood).isEqualTo(SleepLog.WakeUpMood.GOOD)
+        assertThat(body.durationInSeconds).isEqualTo(28800)
+
+        verify(exactly = 1) { getLastNightSleepUseCase.execute(userId) }
+    }
+
+    @Test
+    fun `should return 404 when the user has no sleep log for last night`() {
+        val userId = UUID.randomUUID()
+
+        every { getLastNightSleepUseCase.execute(userId) } returns null
+
+        val response = controller.getLastNightSleep(userId)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+        assertThat(response.body).isNull()
+    }
+
+    @Test
+    fun `should propagate exceptions from the last night use case`() {
+        val userId = UUID.randomUUID()
+
+        every {
+            getLastNightSleepUseCase.execute(any())
+        } throws IllegalArgumentException("boom")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            controller.getLastNightSleep(userId)
+        }
+    }
 
     @Test
     fun `should reject with 400 and the error contract when a required field is missing`() {
