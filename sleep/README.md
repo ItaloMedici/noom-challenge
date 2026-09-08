@@ -57,9 +57,12 @@ Business logic lives in the **domain layer** (framework-free, pure Kotlin). Infr
 **GET** `/v1/users/{userId}/sleep-logs/stats`
 
 - Path: `userId` (UUID)
-- Query: `days` (integer, optional, default=30)
+- Query: `days` (integer, optional, default=30, max=90)
 - Response: 200 - `rangeStart`, `rangeEnd`, `averageDurationInSeconds`, `averageBedTime`, `averageWakeTime`,
   `moodFrequencies`
+- Errors:
+    - 404: User not found
+    - 400: `days` exceeds the maximum of 90, e.g. `{"status": 400, "message": "Statistics range cannot exceed 90 days, but 91 days was requested"}`
 
 ## Setup
 
