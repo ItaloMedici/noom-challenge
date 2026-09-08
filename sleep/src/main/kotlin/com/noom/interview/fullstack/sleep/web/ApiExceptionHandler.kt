@@ -4,6 +4,7 @@ import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogExce
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.noom.interview.fullstack.sleep.domain.exception.DuplicateUsernameException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.web.dto.ErrorResponseDto
 import com.noom.interview.fullstack.sleep.web.dto.FieldErrorDto
@@ -20,6 +21,17 @@ class ApiExceptionHandler {
     @ExceptionHandler(InvalidDateRangeException::class)
     fun handleInvalidDateRange(ex: InvalidDateRangeException): ResponseEntity<ErrorResponseDto> =
         badRequest(ex.message ?: "Invalid date range")
+
+    @ExceptionHandler(StatisticsRangeExceededException::class)
+    fun handleStatisticsRangeExceeded(ex: StatisticsRangeExceededException): ResponseEntity<ErrorResponseDto> =
+        ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(
+                ErrorResponseDto(
+                    status = HttpStatus.BAD_REQUEST.value(),
+                    message = ex.message ?: "Statistics range cannot exceed ${ex.maxDays} days",
+                )
+            )
 
     @ExceptionHandler(UserNotFoundException::class)
     fun handleUserNotFound(ex: UserNotFoundException): ResponseEntity<ErrorResponseDto> =

@@ -18,7 +18,9 @@ class GetSleepStatisticsUseCase(
     fun execute(command: GetStatsCommand): SleepStatistics.SleepStatisticsCalculation {
         userRepository.findById(command.userId) ?: throw UserNotFoundException(command.userId)
 
-        val dateRange = DateRange.lastNDays(command.days ?: SleepStatistics.DEFAULT_RANGE_DAYS, clock)
+        val rangeDays = SleepStatistics.resolveRangeDays(command.days)
+
+        val dateRange = DateRange.lastNDays(rangeDays, clock)
 
         val sleepLogs =
             sleepLogRepository.findByUserIdAndSleepDateBetween(command.userId, dateRange.start, dateRange.end)

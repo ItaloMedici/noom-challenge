@@ -2,9 +2,14 @@ package com.noom.interview.fullstack.sleep.web
 
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import com.noom.interview.fullstack.sleep.application.CreateSleepLogUseCase
+import com.noom.interview.fullstack.sleep.application.CreateUserUseCase
+import com.noom.interview.fullstack.sleep.application.GetLastNightSleepUseCase
+import com.noom.interview.fullstack.sleep.application.GetSleepStatisticsUseCase
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.web.dto.CreateSleepLogRequestDto
 import com.noom.interview.fullstack.sleep.web.dto.FieldErrorDto
@@ -21,6 +26,23 @@ import java.util.*
 class ApiExceptionHandlerTest {
 
     private val handler = ApiExceptionHandler()
+
+    private val createUserUseCase = mockk<CreateUserUseCase>()
+    private val userMockMvc = MockMvcBuilders
+        .standaloneSetup(UserController(createUserUseCase))
+        .setControllerAdvice(handler)
+        .build()
+
+    private val sleepLogMockMvc = MockMvcBuilders
+        .standaloneSetup(
+            SleepLogController(
+                mockk<GetSleepStatisticsUseCase>(),
+                mockk<CreateSleepLogUseCase>(),
+                mockk<GetLastNightSleepUseCase>(),
+            )
+        )
+        .setControllerAdvice(handler)
+        .build()
 
     @Test
     fun `should map InvalidDateRangeException to 400`() {
@@ -163,6 +185,19 @@ class ApiExceptionHandlerTest {
         assertThat(fieldError).isInstanceOf(FieldErrorDto::class.java)
         assertThat(fieldError.field).isEqualTo("username")
         assertThat(fieldError.message).isEqualTo("Username is required")
+    }
+
+    @Test
+    fun `should map StatisticsRangeExceededException to 400 with the custom message`() {
+        val response = handler.handleStatisticsRangeExceeded(
+            StatisticsRangeExceededException(requestedDays = 91, maxDays = 90)
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body!!.status).isEqualTo(400)
+        assertThat(response.body!!.message)
+            .isEqualTo("Statistics range cannot exceed 90 days, but 91 days was requested")
+        assertThat(response.body!!.errors).isEmpty()
     }
 
     private fun methodParameter(): MethodParameter =

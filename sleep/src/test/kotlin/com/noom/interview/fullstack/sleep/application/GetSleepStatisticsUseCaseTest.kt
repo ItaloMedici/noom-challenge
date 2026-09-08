@@ -3,6 +3,7 @@ package com.noom.interview.fullstack.sleep.application
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.SleepStatistics
 import com.noom.interview.fullstack.sleep.domain.User
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.model.DateRange
 import com.noom.interview.fullstack.sleep.domain.repository.SleepLogRepository
@@ -155,6 +156,45 @@ class GetSleepStatisticsUseCaseTest {
 
         verify(exactly = 0) {
             sleepLogRepository.findByUserIdAndSleepDateBetween(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `should throw statistics range exceeded when days exceeds the 90 day maximum`() {
+        val user = User.create("italo")
+
+        every { userRepository.findById(user.id) } returns user
+
+        val exception = assertThrows(StatisticsRangeExceededException::class.java) {
+            useCase.execute(GetStatsCommand(userId = user.id, days = 91))
+        }
+
+        assertThat(exception.requestedDays).isEqualTo(91L)
+        assertThat(exception.maxDays).isEqualTo(SleepStatistics.MAX_RANGE_DAYS)
+        assertThat(exception.message)
+            .isEqualTo("Statistics range cannot exceed 90 days, but 91 days was requested")
+
+        verify(exactly = 0) {
+            sleepLogRepository.findByUserIdAndSleepDateBetween(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `should accept the 90 day maximum boundary`() {
+        val user = User.create("italo")
+        val expectedRange = DateRange(LocalDate.of(2026, 6, 9), LocalDate.of(2026, 9, 6))
+
+        every { userRepository.findById(user.id) } returns user
+        every {
+            sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
+        } returns emptyList()
+
+        val result = useCase.execute(GetStatsCommand(userId = user.id, days = 90))
+
+        assertThat(result.range).isEqualTo(expectedRange)
+
+        verify(exactly = 1) {
+            sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
         }
     }
 

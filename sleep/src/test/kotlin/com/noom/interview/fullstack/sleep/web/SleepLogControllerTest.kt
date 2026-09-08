@@ -3,6 +3,7 @@ package com.noom.interview.fullstack.sleep.web
 import com.noom.interview.fullstack.sleep.application.*
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.SleepStatistics
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.model.DateRange
 import com.noom.interview.fullstack.sleep.web.dto.CreateSleepLogRequestDto
@@ -318,6 +319,25 @@ class SleepLogControllerTest {
             status { isNotFound() }
             jsonPath("$.status") { value(404) }
             jsonPath("$.message") { value("User with ID '$userId' was not found") }
+        }
+
+        verify(exactly = 1) { getSleepStatisticsUseCase.execute(any()) }
+    }
+
+    @Test
+    fun `should reject stats query exceeding the 90 day maximum with 400 and the custom message`() {
+        val userId = UUID.randomUUID()
+
+        every {
+            getSleepStatisticsUseCase.execute(any())
+        } throws StatisticsRangeExceededException(requestedDays = 91, maxDays = 90)
+
+        mockMvc.get("/v1/users/$userId/sleep-logs/stats") {
+            param("days", "91")
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.status") { value(400) }
+            jsonPath("$.message") { value("Statistics range cannot exceed 90 days, but 91 days was requested") }
         }
 
         verify(exactly = 1) { getSleepStatisticsUseCase.execute(any()) }
