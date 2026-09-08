@@ -1,12 +1,9 @@
 package com.noom.interview.fullstack.sleep.web
 
-import com.noom.interview.fullstack.sleep.application.CreateSleepLogCommand
-import com.noom.interview.fullstack.sleep.application.CreateSleepLogUseCase
-import com.noom.interview.fullstack.sleep.application.GetLastNightSleepUseCase
-import com.noom.interview.fullstack.sleep.application.GetSleepStatisticsUseCase
-import com.noom.interview.fullstack.sleep.application.GetStatsCommand
+import com.noom.interview.fullstack.sleep.application.*
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.SleepStatistics
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.model.DateRange
 import com.noom.interview.fullstack.sleep.web.dto.CreateSleepLogRequestDto
@@ -19,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.time.Duration
@@ -309,5 +307,39 @@ class SleepLogControllerTest {
         }
 
         verify { createSleepLogUseCase wasNot Called }
+    }
+
+    @Test
+    fun `should return 404 with the error envelope when the stats user does not exist`() {
+        val userId = UUID.randomUUID()
+
+        every { getSleepStatisticsUseCase.execute(any()) } throws UserNotFoundException(userId)
+
+        mockMvc.get("/v1/users/$userId/sleep-logs/stats").andExpect {
+            status { isNotFound() }
+            jsonPath("$.status") { value(404) }
+            jsonPath("$.message") { value("User with ID '$userId' was not found") }
+        }
+
+        verify(exactly = 1) { getSleepStatisticsUseCase.execute(any()) }
+    }
+
+    @Test
+    fun `should reject stats query exceeding the 90 day maximum with 400 and the custom message`() {
+        val userId = UUID.randomUUID()
+
+        every {
+            getSleepStatisticsUseCase.execute(any())
+        } throws StatisticsRangeExceededException(requestedDays = 91, maxDays = 90)
+
+        mockMvc.get("/v1/users/$userId/sleep-logs/stats") {
+            param("days", "91")
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.status") { value(400) }
+            jsonPath("$.message") { value("Statistics range cannot exceed 90 days, but 91 days was requested") }
+        }
+
+        verify(exactly = 1) { getSleepStatisticsUseCase.execute(any()) }
     }
 }

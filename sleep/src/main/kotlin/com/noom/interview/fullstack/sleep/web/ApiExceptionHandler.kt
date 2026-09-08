@@ -4,15 +4,18 @@ import com.noom.interview.fullstack.sleep.domain.exception.DuplicateSleepLogExce
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.noom.interview.fullstack.sleep.domain.exception.DuplicateUsernameException
 import com.noom.interview.fullstack.sleep.domain.exception.InvalidDateRangeException
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
 import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.web.dto.ErrorResponseDto
 import com.noom.interview.fullstack.sleep.web.dto.FieldErrorDto
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
 class ApiExceptionHandler {
@@ -20,6 +23,17 @@ class ApiExceptionHandler {
     @ExceptionHandler(InvalidDateRangeException::class)
     fun handleInvalidDateRange(ex: InvalidDateRangeException): ResponseEntity<ErrorResponseDto> =
         badRequest(ex.message ?: "Invalid date range")
+
+    @ExceptionHandler(StatisticsRangeExceededException::class)
+    fun handleStatisticsRangeExceeded(ex: StatisticsRangeExceededException): ResponseEntity<ErrorResponseDto> =
+        ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(
+                ErrorResponseDto(
+                    status = HttpStatus.BAD_REQUEST.value(),
+                    message = ex.message ?: "Statistics range cannot exceed ${ex.maxDays} days",
+                )
+            )
 
     @ExceptionHandler(UserNotFoundException::class)
     fun handleUserNotFound(ex: UserNotFoundException): ResponseEntity<ErrorResponseDto> =
@@ -44,6 +58,29 @@ class ApiExceptionHandler {
                     errors = listOf(FieldErrorDto("sleepDate", "Sleep log already exists on this date")),
                 )
             )
+
+    @ExceptionHandler(DataIntegrityViolationException::class)
+    fun handleDataIntegrityViolation(ex: DataIntegrityViolationException): ResponseEntity<ErrorResponseDto> =
+        ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(ErrorResponseDto(HttpStatus.CONFLICT.value(), "Resource already exists"))
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleTypeMismatch(ex: MethodArgumentTypeMismatchException): ResponseEntity<ErrorResponseDto> {
+        val field = ex.name
+        val requiredType = ex.requiredType
+        val fieldMessage =
+            if (requiredType != null && Number::class.java.isAssignableFrom(requiredType)) {
+                "$field must be a positive integer"
+            } else {
+                "$field has an invalid value"
+            }
+        return badRequest("Invalid query parameter", listOf(FieldErrorDto(field, fieldMessage)))
+    }
+
+    @ExceptionHandler(NumberFormatException::class)
+    fun handleNumberFormat(ex: NumberFormatException): ResponseEntity<ErrorResponseDto> =
+        badRequest("Invalid query parameter")
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<ErrorResponseDto> =

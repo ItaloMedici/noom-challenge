@@ -1,5 +1,6 @@
 package com.noom.interview.fullstack.sleep.domain
 
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
 import com.noom.interview.fullstack.sleep.domain.model.DateRange
 import java.time.Duration
 import java.time.LocalTime
@@ -7,6 +8,17 @@ import java.time.LocalTime
 object SleepStatistics {
 
     const val DEFAULT_RANGE_DAYS: Long = 30
+
+    const val MAX_RANGE_DAYS: Long = 90
+
+    fun resolveRangeDays(requestedDays: Long?): Long {
+        val days = requestedDays ?: DEFAULT_RANGE_DAYS
+        if (days > MAX_RANGE_DAYS) {
+            throw StatisticsRangeExceededException(requestedDays = days, maxDays = MAX_RANGE_DAYS)
+        }
+        return days
+    }
+
 
     fun calculate(sleepLogs: List<SleepLog>, range: DateRange): SleepStatisticsCalculation {
         require(sleepLogs.isNotEmpty()) { "Cannot calculate statistics from an empty log set" }

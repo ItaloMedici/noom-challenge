@@ -3,8 +3,11 @@ package com.noom.interview.fullstack.sleep.application
 import com.noom.interview.fullstack.sleep.domain.SleepLog
 import com.noom.interview.fullstack.sleep.domain.SleepStatistics
 import com.noom.interview.fullstack.sleep.domain.User
+import com.noom.interview.fullstack.sleep.domain.exception.StatisticsRangeExceededException
+import com.noom.interview.fullstack.sleep.domain.exception.UserNotFoundException
 import com.noom.interview.fullstack.sleep.domain.model.DateRange
 import com.noom.interview.fullstack.sleep.domain.repository.SleepLogRepository
+import com.noom.interview.fullstack.sleep.domain.repository.UserRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -22,8 +25,9 @@ import java.util.*
 class GetSleepStatisticsUseCaseTest {
 
     private val fixedClock = Clock.fixed(Instant.parse("2026-09-06T12:00:00Z"), ZoneId.of("UTC"))
+    private val userRepository = mockk<UserRepository>()
     private val sleepLogRepository = mockk<SleepLogRepository>()
-    private val useCase = GetSleepStatisticsUseCase(sleepLogRepository, fixedClock)
+    private val useCase = GetSleepStatisticsUseCase(userRepository, sleepLogRepository, fixedClock)
 
     @Test
     fun `should resolve the last 30 days relative to the fixed clock when querying with days = 30`() {
@@ -38,6 +42,7 @@ class GetSleepStatisticsUseCaseTest {
             mood = SleepLog.WakeUpMood.GOOD,
         )
 
+        every { userRepository.findById(user.id) } returns user
         every {
             sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
         } returns listOf(sleepLog)
@@ -59,6 +64,7 @@ class GetSleepStatisticsUseCaseTest {
         val user = User.create("italo")
         val expectedRange = DateRange(LocalDate.of(2026, 8, 8), LocalDate.of(2026, 9, 6))
 
+        every { userRepository.findById(user.id) } returns user
         every {
             sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
         } returns emptyList()
@@ -71,15 +77,16 @@ class GetSleepStatisticsUseCaseTest {
     }
 
     @Test
-    fun `should return a non-null empty calculation when the user has no sleep logs in range`() {
-        val unknownUserId = UUID.randomUUID()
+    fun `should return an empty calculation when the user exists but has no sleep logs in range`() {
+        val user = User.create("italo")
         val expectedRange = DateRange(LocalDate.of(2026, 8, 8), LocalDate.of(2026, 9, 6))
 
+        every { userRepository.findById(user.id) } returns user
         every {
-            sleepLogRepository.findByUserIdAndSleepDateBetween(unknownUserId, expectedRange.start, expectedRange.end)
+            sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
         } returns emptyList()
 
-        val result = useCase.execute(GetStatsCommand(userId = unknownUserId, days = 30))
+        val result = useCase.execute(GetStatsCommand(userId = user.id, days = 30))
 
         assertThat(result).isNotNull
         assertThat(result).isEqualTo(SleepStatistics.empty(expectedRange))
@@ -89,8 +96,28 @@ class GetSleepStatisticsUseCaseTest {
         assertThat(result.moodFrequencies).isEmpty()
 
         verify(exactly = 1) {
-            sleepLogRepository.findByUserIdAndSleepDateBetween(unknownUserId, expectedRange.start, expectedRange.end)
+            sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
         }
+    }
+
+    @Test
+    fun `should throw user not found and never query sleep logs when the user does not exist`() {
+        val unknownUserId = UUID.randomUUID()
+
+        every { userRepository.findById(unknownUserId) } returns null
+
+        val exception =
+            assertThrows(UserNotFoundException::class.java) {
+                useCase.execute(GetStatsCommand(userId = unknownUserId, days = 30))
+            }
+
+        assertThat(exception.userId).isEqualTo(unknownUserId)
+        assertThat(exception.message).isEqualTo("User with ID '$unknownUserId' was not found")
+
+        verify(exactly = 0) {
+            sleepLogRepository.findByUserIdAndSleepDateBetween(any(), any(), any())
+        }
+        verify(exactly = 1) { userRepository.findById(unknownUserId) }
     }
 
     @Test
@@ -106,6 +133,7 @@ class GetSleepStatisticsUseCaseTest {
             mood = SleepLog.WakeUpMood.OK,
         )
 
+        every { userRepository.findById(user.id) } returns user
         every {
             sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
         } returns listOf(sleepLog)
@@ -118,14 +146,55 @@ class GetSleepStatisticsUseCaseTest {
 
     @Test
     fun `should throw when days is not positive`() {
-        val userId = UUID.randomUUID()
+        val user = User.create("italo")
+
+        every { userRepository.findById(user.id) } returns user
 
         assertThrows(IllegalArgumentException::class.java) {
-            useCase.execute(GetStatsCommand(userId = userId, days = 0))
+            useCase.execute(GetStatsCommand(userId = user.id, days = 0))
         }
 
         verify(exactly = 0) {
             sleepLogRepository.findByUserIdAndSleepDateBetween(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `should throw statistics range exceeded when days exceeds the 90 day maximum`() {
+        val user = User.create("italo")
+
+        every { userRepository.findById(user.id) } returns user
+
+        val exception = assertThrows(StatisticsRangeExceededException::class.java) {
+            useCase.execute(GetStatsCommand(userId = user.id, days = 91))
+        }
+
+        assertThat(exception.requestedDays).isEqualTo(91L)
+        assertThat(exception.maxDays).isEqualTo(SleepStatistics.MAX_RANGE_DAYS)
+        assertThat(exception.message)
+            .isEqualTo("Statistics range cannot exceed 90 days, but 91 days was requested")
+
+        verify(exactly = 0) {
+            sleepLogRepository.findByUserIdAndSleepDateBetween(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `should accept the 90 day maximum boundary`() {
+        val user = User.create("italo")
+        val expectedRange = DateRange(LocalDate.of(2026, 6, 9), LocalDate.of(2026, 9, 6))
+
+        every { userRepository.findById(user.id) } returns user
+        every {
+            sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
+        } returns emptyList()
+
+        val result = useCase.execute(GetStatsCommand(userId = user.id, days = 90))
+
+        assertThat(result.range).isEqualTo(expectedRange)
+
+        verify(exactly = 1) {
+            sleepLogRepository.findByUserIdAndSleepDateBetween(user.id, expectedRange.start, expectedRange.end)
         }
     }
 
